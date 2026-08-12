@@ -1,4 +1,5 @@
 export * from "./lib/common/BasicEventWrapper";
+export * from "./lib/events/functional/ControlSceneRequestEvent";
 export * from "./lib/events/functional/CreditsBalanceChangedEvent";
 export * from "./lib/events/functional/ImageEditCompleteEvent";
 export * from "./lib/events/functional/MediaFileDeletedEvent";
