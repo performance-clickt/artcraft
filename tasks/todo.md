@@ -2,7 +2,14 @@
 
 Linear is the record; this file is the resume map for the next session.
 
-## 2026-08-12 — Round 3 in flight: 4 lanes (HM-917/918/919/920)
+## 2026-08-12 — Round 3: all 4 lanes In Review; r3 GATE RUNNING
+
+1. **Phase:** HM-917 (@35dd55c3d1, PR #3), HM-918 (@2b9672a195, PR #5), HM-919 (@9dee11c6f8, PR #6), HM-920 (@c575721e0d, PR #4) all PASS → In Review. Integration branch artcraft-mcp-r3 @ 1abeccb73c (pushed): 4 merges + coordinator commits (conflict resolution keep-all-anchored-lines; ControlErrorCode deduped to 8 variants; brief's stale scene wire string fixed → control_scene_request_event, contract comment posted on HM-921). Pre-checks: cargo check clean, 124 lib tests pass.
+2. **GATE RUNNING:** run wf_7bb90e09-2b0 (applyFixes true). Resume: Workflow { scriptPath: "/Users/johngreenhow/.claude/projects/-Users-johngreenhow-Artcraft-worktrees-artcraft-mcp-r3/0eeda523-943b-41da-b930-921650575429/workflows/scripts/merge-gate-wf_7bb90e09-2b0.js", resumeFromRunId: "wf_7bb90e09-2b0" }.
+3. **Next after gate:** reflect (4 issues vs acceptance) → QC live matrix (this closes the round-wide deferred evidence: all endpoints incl. 401/403/404/409/504 paths, scene timeout with no frontend listener, /v1/tasks list, /v1/media list, /v1/media/download, AND one cheap real image generation — estimate_cost first, cheapest model, batch 1; M2 milestone check rides on this) → land → prune → checkpoint + learnings (queued lesson candidates from all 4 lanes + handle_request overgeneralization relay incident).
+4. **New-issue candidates queued (file at round close):** estimate_cost anonymous pricing; global enveloped fallback for 405/unmatched; commands return TaskId (kills generate_image mirror + null task_ids); /v1/media two-hop; scene body limit review. HM-921 now unblocked-by-920-merge after landing.
+
+## 2026-08-12 — Round 3 in flight: 4 lanes (HM-917/918/919/920) (superseded)
 
 1. **Phase:** round 2 LANDED on main @ 3a647feb38 (HM-916+HM-928+gate fixes; QC 6/6); lessons applied (CLAUDE.md @ cfd44d8129, Lessons Log doc lessons-log-4fb79dcb5f5b, 6 entries). Round 3 launched: 4 Opus lanes claimed In Progress with plan comments, worktrees off main @ cfd44d8129.
 2. **Lanes:** hm-917 (read endpoints), hm-918 (generation endpoints, NO real generations), hm-919 (tasks/media), hm-920 (Rust scene bridge; lib.rs + tauri_event_name.rs allowlisted). Worktrees /Users/johngreenhow/Artcraft/worktrees/hm-9xx, branches = Linear gitBranchNames. Managed contention: each lane adds ONE anchored line (`// HM-9xx`) in build_control_router ABOVE the auth .layer() (post-.layer routes escape auth); endpoints/mod.rs append-only; conflicts resolved by coordinator at integration.
