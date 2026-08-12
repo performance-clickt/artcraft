@@ -2,6 +2,17 @@
 
 Linear is the record; this file is the resume map for the next session.
 
+## 2026-08-12 — Round 2 in flight: HM-916 + HM-928 lanes running
+
+1. **Phase:** round 2 launched, 2 disjoint lanes, waiting on executors. HM-915 PASS → In Review (awaiting John's Done verdict; ~2 min cold build, not 30-60 min — planning assumption corrected). HM-928 created this round (docs gaps found by HM-915).
+2. **Lanes:**
+   - HM-916 (Opus): control-server skeleton. Worktree /Users/johngreenhow/Artcraft/worktrees/hm-916, branch john/hm-916-control-server-skeleton-axum-thread-discovery-file-bearer off main @ 261fce17f0. Will run the dev app for curl verification (quits installed ArtCraft; Vite :5173 in use while verifying).
+   - HM-928 (Sonnet): _docs/dev_setup.md fix. Worktree /Users/johngreenhow/Artcraft/worktrees/hm-928, branch john/hm-928-fix-_docsdev_setupmd-missing-cmake-global-nx-prerequisites off main @ 261fce17f0.
+   - Surfaces disjoint (crates/**+Cargo.toml vs _docs/). Both end: PR to main + wrap-up + In Review. Never self-merge.
+3. **Env changes so far (user-space, disclosed):** cargo-tauri 2.11.4, global nx 23.1.1, cmake 4.4.2 (brew, John-approved).
+4. **Open decisions:** John to review/close HM-915 (In Review). Lessons proposals pending user review (native-deps-in-toolchain-check; dev_setup drift) — not yet applied anywhere.
+5. **Cold-start successor:** step 1 — check HM-916/HM-928 in Linear. Both In Review with PRs → stage integration branch `artcraft-mcp-r2` off main in a fresh worktree at an absolute path, merge both lane branches, run merge gate (orchestrator:merge-gate) then reflect then QC, land on main, prune worktrees. Any lane still In Progress with no live executor → stale: inspect its worktree/branch state before re-running.
+
 ## 2026-08-12 (later) — Round 1: cmake blocker resolved, executor resumed
 
 1. **Phase:** round 1, lane HM-915 resumed after halt. Executor hit missing `cmake` (boring-sys2 build dep) at 621/810 crates and halted per rules; John approved `brew install cmake` (v4.4.2 installed); executor resumed in background to re-run the build, verify logged-in launch, post wrap-up, move HM-915 → In Review.
