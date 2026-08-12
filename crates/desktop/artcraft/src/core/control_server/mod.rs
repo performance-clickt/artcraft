@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod endpoints;
+pub mod enveloped_fallback; // HM-934
 pub mod envelope;
 pub mod require_signed_in_credentials;
 pub mod require_tauri_state;

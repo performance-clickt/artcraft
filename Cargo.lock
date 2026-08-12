@@ -689,6 +689,7 @@ dependencies = [
  "tokens",
  "tokio",
  "tokio-util",
+ "tower 0.5.3",
  "url",
  "url_utils",
  "uuid 1.22.0",

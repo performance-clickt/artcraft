@@ -65,6 +65,11 @@ pub enum ControlErrorCode {
   Unauthorized,
   BadRequest,
   NotLoggedIn,
+  // NB: `NotFound` is the *route* miss (no such path); `TaskNotFound` is the *resource* miss on a
+  // route that does exist. They share a 404 but not a meaning, so a client can tell "you called an
+  // endpoint I don't have" from "that task id is gone" without parsing the message. HM-934
+  NotFound,
+  MethodNotAllowed,
   TaskNotFound,
   UpstreamApiError,
   SceneNotActive,
@@ -78,6 +83,8 @@ impl ControlErrorCode {
       Self::Unauthorized => "UNAUTHORIZED",
       Self::BadRequest => "BAD_REQUEST",
       Self::NotLoggedIn => "NOT_LOGGED_IN",
+      Self::NotFound => "NOT_FOUND",
+      Self::MethodNotAllowed => "METHOD_NOT_ALLOWED",
       Self::TaskNotFound => "TASK_NOT_FOUND",
       Self::UpstreamApiError => "UPSTREAM_API_ERROR",
       Self::SceneNotActive => "SCENE_NOT_ACTIVE",
@@ -95,6 +102,8 @@ impl ControlErrorCode {
       // with different credentials. What is missing is the *app's* own Artcraft session, which
       // no HTTP credential from this caller can supply: the user must sign in to ArtCraft.
       Self::NotLoggedIn => StatusCode::FORBIDDEN,
+      Self::NotFound => StatusCode::NOT_FOUND,
+      Self::MethodNotAllowed => StatusCode::METHOD_NOT_ALLOWED,
       Self::TaskNotFound => StatusCode::NOT_FOUND,
       // The control server reached the backend but the backend (or the hop to it) failed.
       Self::UpstreamApiError => StatusCode::BAD_GATEWAY,

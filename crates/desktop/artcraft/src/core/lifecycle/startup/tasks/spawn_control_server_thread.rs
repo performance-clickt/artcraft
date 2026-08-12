@@ -1,14 +1,14 @@
-use crate::core::control_server::auth::bearer_auth_layer::bearer_auth_layer;
 use crate::core::control_server::endpoints::generate::generation_router::build_generation_router;
 use crate::core::control_server::endpoints::health::get_health_handler;
 use crate::core::control_server::endpoints::read_endpoints_router::read_endpoints_router; // HM-917
 use crate::core::control_server::endpoints::task_and_media_routes::build_task_and_media_router;
 use crate::core::control_server::endpoints::scene::post_scene_handler;
+use crate::core::control_server::enveloped_fallback::seal_control_router; // HM-934
 use crate::core::control_server::state::control_server_settings::ControlServerSettings;
 use crate::core::control_server::state_file::write_control_state_file::write_control_state_file;
 use crate::core::state::data_dir::app_data_root::AppDataRoot;
 use axum::routing::{get, post};
-use axum::{middleware, Router};
+use axum::Router;
 use errors::AnyhowResult;
 use log::{error, info};
 use tauri::AppHandle;
@@ -65,19 +65,21 @@ async fn run_control_server(
   Ok(())
 }
 
-/// NB: `layer` (not `route_layer`) is deliberate — it authenticates unmatched paths too, so an
-/// unauthenticated caller cannot probe which routes exist. Every future endpoint must be added
-/// to the `route` chain ABOVE this `layer` call; a route mounted after it is NOT authenticated.
+/// NB: Every future endpoint must be added to the `route` chain ABOVE the `seal_control_router`
+/// call; a route mounted after it is neither authenticated nor covered by the 405 fallback.
 fn build_control_router(
   app_handle: AppHandle,
   settings: &ControlServerSettings,
 ) -> Router {
-  Router::new()
+  let routes = Router::new()
     .route(CONTROL_SERVER_HEALTH_PATH, get(get_health_handler))
     .merge(read_endpoints_router()) // HM-917
     .merge(build_generation_router()) // HM-918
     .merge(build_task_and_media_router()) // HM-919
-    .route(CONTROL_SERVER_SCENE_PATH, post(post_scene_handler)) // HM-920
-    .layer(middleware::from_fn_with_state(settings.clone(), bearer_auth_layer))
+    .route(CONTROL_SERVER_SCENE_PATH, post(post_scene_handler)); // HM-920
+
+  // HM-934: Attaches the enveloped 404/405 catch-alls and the bearer auth layer together. They
+  // are one call because their order is a security boundary — see `seal_control_router`.
+  seal_control_router(routes, settings)
     .with_state(app_handle)
 }
