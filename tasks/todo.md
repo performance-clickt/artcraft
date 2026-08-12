@@ -2,7 +2,13 @@
 
 Linear is the record; this file is the resume map for the next session.
 
-## 2026-08-12 — Round 2: both lanes In Review; GATE RUNNING
+## 2026-08-12 — Round 2: gate done (8 fixed, 2 skipped→issues); REFLECT RUNNING
+
+1. **Phase:** merge gate complete on artcraft-mcp-r2. Fix commit 2d3b1ed427 pushed (unlink+create_new 0600 token file; logged_in=session.is_some(); Windows ACL warning; try_state; case-insensitive Bearer; error enum trimmed; nx doc pinned 21.2.3; tests 6/6; cargo check clean). Skipped findings routed: HM-929 expanded (atomic write + shutdown cleanup + live-instance guard w/ decision options, rec (a) refuse); HM-930 filed (npx nx script fix, branch AFTER r2 lands); startup-window login note commented on HM-922.
+2. **REFLECT RUNNING** (Opus, read-only) on worktree /Users/johngreenhow/Artcraft/worktrees/artcraft-mcp-r2 judging HM-916/HM-928 vs acceptance post-fixes.
+3. **Next:** reflect verdicts → QC probes (incl. any deferred-to-QC items; likely re-run live curl matrix on post-fix build) → land artcraft-mcp-r2 on main → push → prune worktrees hm-916/hm-928/artcraft-mcp-r2 + local lane branches → checkpoint + learnings loop (4 lesson proposals pending user: native deps; build-time estimate; gh pr create --repo; and gate-fix classes).
+
+## 2026-08-12 — Round 2: both lanes In Review; GATE RUNNING (superseded)
 
 1. **Phase:** integration staged, merge gate running. HM-916 PASS (branch @ d3a4ffa3a8, PR #2), HM-928 PASS (@ dfe480cc37, PR #1), both In Review with wrap-ups. HM-929 filed (discovery-file hardening, blockedBy HM-916, Low).
 2. **Integration:** worktree /Users/johngreenhow/Artcraft/worktrees/artcraft-mcp-r2, branch artcraft-mcp-r2 off main @ 46d66ad715; both lanes merged clean + coordinator fix (dropped stray root package-lock.json from HM-916 lane). Pushed. Pre-checks green: SQLX_OFFLINE cargo check 1m11s clean.
