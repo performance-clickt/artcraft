@@ -66,6 +66,10 @@ pub enum ControlErrorCode {
   BadRequest, // HM-917
   NotLoggedIn, // HM-917
   UpstreamApiError, // HM-917
+  BadRequest, // HM-919
+  NotLoggedIn, // HM-919
+  TaskNotFound, // HM-919
+  UpstreamApiError, // HM-919
   Internal,
   // HM-918
   BadRequest,
@@ -79,6 +83,7 @@ impl ControlErrorCode {
       Self::Unauthorized => "UNAUTHORIZED",
       Self::BadRequest => "BAD_REQUEST",
       Self::NotLoggedIn => "NOT_LOGGED_IN",
+      Self::TaskNotFound => "TASK_NOT_FOUND",
       Self::UpstreamApiError => "UPSTREAM_API_ERROR",
       Self::Internal => "INTERNAL",
       Self::BadRequest => "BAD_REQUEST",
@@ -96,6 +101,7 @@ impl ControlErrorCode {
       // with different credentials. What is missing is the *app's* own Artcraft session, which
       // no HTTP credential from this caller can supply: the user must sign in to ArtCraft.
       Self::NotLoggedIn => StatusCode::FORBIDDEN,
+      Self::TaskNotFound => StatusCode::NOT_FOUND,
       // The control server reached the backend but the backend (or the hop to it) failed.
       Self::UpstreamApiError => StatusCode::BAD_GATEWAY,
       Self::Internal => StatusCode::INTERNAL_SERVER_ERROR,

@@ -6,3 +6,5 @@ pub mod upload_image_media_file_from_file;
 pub mod upload_new_engine_asset_from_file;
 pub mod upload_video_media_file_from_file;
 pub mod legacy_upload_media_file_from_file;
+pub mod list_media_files_for_user;
+pub mod search_session_media_files;
