@@ -2,7 +2,12 @@
 
 Linear is the record; this file is the resume map for the next session.
 
-## 2026-08-12 — Round 2 in flight: HM-916 + HM-928 lanes running
+## 2026-08-12 — Round 2: HM-928 done (In Review, PR #1); HM-916 still running
+
+- HM-928 PASS: branch john/hm-928-... @ dfe480cc37, PR https://github.com/performance-clickt/artcraft/pull/1, only _docs/dev_setup.md touched. Incident: gh pr create defaulted to upstream storytold/artcraft (stray public PR storytold#1893 opened+closed); HM-916 executor warned to use --repo performance-clickt/artcraft --base main. LESSON CANDIDATE for CLAUDE.md git section.
+- HM-916 (Opus) still running in worktrees/hm-916.
+
+## 2026-08-12 — Round 2 in flight: HM-916 + HM-928 lanes running (superseded)
 
 1. **Phase:** round 2 launched, 2 disjoint lanes, waiting on executors. HM-915 PASS → In Review (awaiting John's Done verdict; ~2 min cold build, not 30-60 min — planning assumption corrected). HM-928 created this round (docs gaps found by HM-915).
 2. **Lanes:**
