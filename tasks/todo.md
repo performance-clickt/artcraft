@@ -2,7 +2,13 @@
 
 Linear is the record; this file is the resume map for the next session.
 
-## 2026-08-12 — Round 3 LANDED; M2 complete; session quiescent
+## 2026-08-12 — Round 4 in flight: HM-921/922/930/934
+
+1. **Lanes launched** (claimed + plan comments posted; worktrees off main @ 7f71127381): hm-921 frontend ControlBridge (Opus, HOLDS THE LIVE-APP SLOT — runs dev app with RUST_LOG=debug, curls scene ops tab open/closed); hm-922 MCP TS scaffold (Opus, mcp/artcraft-mcp new top dir, build+unit only, inspector deferred to QC); hm-930 npx-nx script fix (Sonnet, static verify, Vite check deferred — 5173 owned by 921); hm-934 enveloped fallback (Opus, auth-ordering proof via tower oneshot tests, live deferred). Surfaces disjoint. Branch names: 921/922/930 = Linear gitBranchNames, 934 = hm-934-enveloped-fallback.
+2. **After lanes:** integration artcraft-mcp-r4 off main → expected conflicts only in build_control_router (// HM-934 line) → gate → reflect → QC (RUST_LOG=debug; close probe-14 UI half; HM-930 Vite check; HM-922 inspector smoke vs live app; M3 milestone check = scene ops open/closed + timeout) → merge approval ask → land → lessons.
+3. **Open for John:** Done verdicts HM-915..920/928; HM-929 option (a); delete superseded Lessons Log duplicates.
+
+## 2026-08-12 — Round 3 LANDED; M2 complete; session quiescent (superseded)
 
 1. **Landed:** main @ cbb5ba03d6 (r3: HM-917/918/919/920 + gate fixes; reflect MERGE ×4; QC 20 PASS/0 FAIL; PRs #3–#6 merged). Worktrees + lane/integration branches pruned; live tree clean on main. CLAUDE.md r3 lessons added (external-contract rule; verify-first specs) — commit pending in next checkpoint commit. Canonical Lessons Log = linear.app/clickt/document/lessons-log-4a8de456b76a (12 entries); older duplicate retitled "superseded copy — do not use" (John: safe to delete; a third seed-era doc may also exist). M2 status update posted on the project (onTrack).
 2. **Board:** In Review awaiting John's Done: HM-915,916,917,918,919,920,928. Backlog: HM-921 (frontend ControlBridge — now unblocked, next lane), HM-922 (MCP scaffold — unblocked, 917 merged), HM-929/930/932–936 (hardening/follow-ups, unblocked), HM-923/924 (blocked by 922), HM-925/926/927 (M4/M5 chain). HM-931 = canceled throwaway.
