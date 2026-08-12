@@ -107,6 +107,12 @@ pub enum TauriEventName {
   /// File with that name was already downloaded
   #[serde(rename = "flash_file_download_error_event")]
   FlashFileDownloadErrorEvent,
+
+  /// Control event:
+  /// The embedded control server asks the webview to run a scene operation and reply
+  /// with the matching `request_id` (see `control_bridge_reply_command`).
+  #[serde(rename = "control_scene_request_event")]
+  ControlSceneRequestEvent,
 }
 
 impl_enum_display_and_debug_using_to_str!(TauriEventName);
@@ -136,6 +142,7 @@ impl TauriEventName {
       Self::ShowProviderLoginModalEvent => "show_provider_login_modal_event",
       Self::FlashUserInputErrorEvent => "flash_user_input_error_event",
       Self::FlashFileDownloadErrorEvent => "flash_file_download_error_event",
+      Self::ControlSceneRequestEvent => "control_scene_request_event",
     }
   }
 
@@ -159,6 +166,7 @@ impl TauriEventName {
       "show_provider_login_modal_event" => Ok(Self::ShowProviderLoginModalEvent),
       "flash_user_input_error_event" => Ok(Self::FlashUserInputErrorEvent),
       "flash_file_download_error_event" => Ok(Self::FlashFileDownloadErrorEvent),
+      "control_scene_request_event" => Ok(Self::ControlSceneRequestEvent),
       _ => Err(format!("invalid tauri_event_name: {:?}", job_status)),
     }
   }
@@ -185,6 +193,7 @@ impl TauriEventName {
       Self::ShowProviderLoginModalEvent,
       Self::FlashUserInputErrorEvent,
       Self::FlashFileDownloadErrorEvent,
+      Self::ControlSceneRequestEvent,
     ])
   }
 }
@@ -217,6 +226,7 @@ mod tests {
       assert_serialization(TauriEventName::ShowProviderLoginModalEvent, "show_provider_login_modal_event");
       assert_serialization(TauriEventName::FlashUserInputErrorEvent, "flash_user_input_error_event");
       assert_serialization(TauriEventName::FlashFileDownloadErrorEvent, "flash_file_download_error_event");
+      assert_serialization(TauriEventName::ControlSceneRequestEvent, "control_scene_request_event");
     }
 
     #[test]
@@ -239,6 +249,7 @@ mod tests {
       assert_eq!(TauriEventName::ShowProviderLoginModalEvent.to_str(), "show_provider_login_modal_event");
       assert_eq!(TauriEventName::FlashUserInputErrorEvent.to_str(), "flash_user_input_error_event");
       assert_eq!(TauriEventName::FlashFileDownloadErrorEvent.to_str(), "flash_file_download_error_event");
+      assert_eq!(TauriEventName::ControlSceneRequestEvent.to_str(), "control_scene_request_event");
     }
 
     #[test]
@@ -261,12 +272,13 @@ mod tests {
       assert_eq!(TauriEventName::from_str("show_provider_login_modal_event").unwrap(), TauriEventName::ShowProviderLoginModalEvent);
       assert_eq!(TauriEventName::from_str("flash_user_input_error_event").unwrap(), TauriEventName::FlashUserInputErrorEvent);
       assert_eq!(TauriEventName::from_str("flash_file_download_error_event").unwrap(), TauriEventName::FlashFileDownloadErrorEvent);
+      assert_eq!(TauriEventName::from_str("control_scene_request_event").unwrap(), TauriEventName::ControlSceneRequestEvent);
     }
 
     #[test]
     fn all_variants() {
       let mut variants = TauriEventName::all_variants();
-      assert_eq!(variants.len(), 18);
+      assert_eq!(variants.len(), 19);
       assert_eq!(variants.pop_first(), Some(TauriEventName::GenerationEnqueueSuccessEvent));
       assert_eq!(variants.pop_first(), Some(TauriEventName::GenerationEnqueueFailureEvent));
       assert_eq!(variants.pop_first(), Some(TauriEventName::GenerationCompleteEvent));
@@ -285,6 +297,7 @@ mod tests {
       assert_eq!(variants.pop_first(), Some(TauriEventName::ShowProviderLoginModalEvent));
       assert_eq!(variants.pop_first(), Some(TauriEventName::FlashUserInputErrorEvent));
       assert_eq!(variants.pop_first(), Some(TauriEventName::FlashFileDownloadErrorEvent));
+      assert_eq!(variants.pop_first(), Some(TauriEventName::ControlSceneRequestEvent));
       assert_eq!(variants.pop_first(), None);
     }
   }

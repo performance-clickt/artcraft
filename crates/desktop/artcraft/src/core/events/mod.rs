@@ -4,3 +4,4 @@ pub mod generation_events;
 pub mod sendable_event_error;
 pub mod sendable_event_trait;
 pub mod warning_events;
+pub mod control_scene_request_event;

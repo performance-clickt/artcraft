@@ -21,7 +21,7 @@
 6. Task + media endpoints: `/v1/tasks`, `/v1/tasks/{id}`, `/v1/media/download`, `/v1/media` (list via artcraft_client)
 
 **M3 — Scene bridge** (integration check: scene ops via curl with 3D tab open; SCENE_NOT_ACTIVE + timeout paths verified)
-7. Rust bridge: `TauriEventName::ControlSceneRequest`, event struct, `ControlBridgeState` oneshot map, `control_bridge_reply_command`, `/v1/scene/{op}`
+7. Rust bridge: `TauriEventName::ControlSceneRequestEvent` (wire string `control_scene_request_event`), event struct, `ControlBridgeState` oneshot map, `control_bridge_reply_command`, `/v1/scene/{op}`
 8. Frontend bridge: event hook (tauri-events), reply wrapper (tauri-api), `ControlBridge.tsx`, `root.tsx` mount, index exports
 
 **M4 — MCP server** (integration check: all 16 tools green in MCP inspector)
@@ -99,7 +99,7 @@ Errors are actionable: "ArtCraft is not running. Launch the patched app, then re
 
 **New Rust** (under `crates/desktop/artcraft/src/core/`): `control_server/{mod.rs, state/control_server_settings.rs, state/control_bridge_state.rs, state_file/write_control_state_file.rs, auth/bearer_auth_layer.rs, envelope/control_response.rs, endpoints/*.rs (health, models, estimate_cost, generate_image, generate_video, generate_object, generate_world, bg_removal, tasks, media_download, media_list, credits, scene), scene_bridge/{emit_scene_request.rs, await_bridge_reply.rs, scene_op.rs}}`; `commands/control/control_bridge_reply_command.rs`; `events/control_scene_request_event.rs`; `lifecycle/startup/tasks/spawn_control_server_thread.rs` (bind `127.0.0.1:0`, write state file, `tauri::async_runtime::spawn(axum::serve(..))`, log-and-continue on failure — never crash the app).
 
-**New frontend**: `frontend/libs/tauri-events/src/lib/events/functional/ControlSceneRequestEvent.ts` (EVENT_NAME `"control_scene_request"`); `frontend/libs/tauri-api/src/lib/control/ControlBridgeReply.ts`; `frontend/apps/artcraft/app/src/control/ControlBridge.tsx` (renders null).
+**New frontend**: `frontend/libs/tauri-events/src/lib/events/functional/ControlSceneRequestEvent.ts` (EVENT_NAME `"control_scene_request_event"` (canonical wire string per HM-920)); `frontend/libs/tauri-api/src/lib/control/ControlBridgeReply.ts`; `frontend/apps/artcraft/app/src/control/ControlBridge.tsx` (renders null).
 
 **New MCP**: `mcp/artcraft-mcp/` top-level dir (outside Nx and cargo workspaces): `package.json, tsconfig.json, README.md, src/{index.ts, control-client.ts, format.ts, tools/{generation,tasks,media,scene,status}.ts}, evals/`.
 
@@ -108,7 +108,7 @@ Errors are actionable: "ArtCraft is not running. Launch the patched app, then re
 2. `crates/desktop/artcraft/Cargo.toml` — axum, uuid
 3. `crates/desktop/artcraft/src/lib.rs` — `.manage(ControlBridgeState)` (~line 196-209) + register `control_bridge_reply_command` (~line 213-265; must stay in lib.rs) + mod wiring
 4. `crates/desktop/artcraft/src/core/lifecycle/startup/handle_tauri_startup.rs` — import + one spawn call
-5. `crates/schema/public/enums/src/tauri/ux/tauri_event_name.rs` — `ControlSceneRequest` variant (`#[serde(rename = "control_scene_request")]`, name ends `_event` convention check)
+5. `crates/schema/public/enums/src/tauri/ux/tauri_event_name.rs` — `ControlSceneRequestEvent` variant (wire string `"control_scene_request_event"` — landed in HM-920; the enum convention appends `_event`)
 6. `frontend/apps/artcraft/app/src/root.tsx` — mount `<ControlBridge />` next to `<Outlet />` inside `<PostHogProvider>` (verified: App at line 45)
 7. `frontend/libs/tauri-events/src/index.ts` — export line
 8. `frontend/libs/tauri-api/src/index.ts` — export line

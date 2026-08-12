@@ -63,6 +63,12 @@ pub struct ControlErrorBody {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ControlErrorCode {
   Unauthorized,
+  BadRequest,
+  NotLoggedIn,
+  TaskNotFound,
+  UpstreamApiError,
+  SceneNotActive,
+  SceneBridgeTimeout,
   Internal,
 }
 
@@ -70,6 +76,12 @@ impl ControlErrorCode {
   pub fn to_str(&self) -> &'static str {
     match self {
       Self::Unauthorized => "UNAUTHORIZED",
+      Self::BadRequest => "BAD_REQUEST",
+      Self::NotLoggedIn => "NOT_LOGGED_IN",
+      Self::TaskNotFound => "TASK_NOT_FOUND",
+      Self::UpstreamApiError => "UPSTREAM_API_ERROR",
+      Self::SceneNotActive => "SCENE_NOT_ACTIVE",
+      Self::SceneBridgeTimeout => "SCENE_BRIDGE_TIMEOUT",
       Self::Internal => "INTERNAL",
     }
   }
@@ -77,6 +89,19 @@ impl ControlErrorCode {
   pub fn http_status(&self) -> StatusCode {
     match self {
       Self::Unauthorized => StatusCode::UNAUTHORIZED,
+      Self::BadRequest => StatusCode::BAD_REQUEST,
+      // NB: 403, not 401. The caller's bearer token IS valid here — 401/`UNAUTHORIZED` is
+      // reserved for a bad token, and answering 401 would wrongly invite the client to retry
+      // with different credentials. What is missing is the *app's* own Artcraft session, which
+      // no HTTP credential from this caller can supply: the user must sign in to ArtCraft.
+      Self::NotLoggedIn => StatusCode::FORBIDDEN,
+      Self::TaskNotFound => StatusCode::NOT_FOUND,
+      // The control server reached the backend but the backend (or the hop to it) failed.
+      Self::UpstreamApiError => StatusCode::BAD_GATEWAY,
+      // NB: The request was well-formed; the app just has no 3D scene mounted to run it against.
+      Self::SceneNotActive => StatusCode::CONFLICT,
+      // NB: We are the gateway to the webview, and the webview never answered.
+      Self::SceneBridgeTimeout => StatusCode::GATEWAY_TIMEOUT,
       Self::Internal => StatusCode::INTERNAL_SERVER_ERROR,
     }
   }
