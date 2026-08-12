@@ -27,6 +27,6 @@ frontend_npm_install
 
 export VITE_ENVIRONMENT_TYPE="production"
 
-nx dev artcraft
+npx nx dev artcraft
 
 popd || exit
