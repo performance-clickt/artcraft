@@ -128,7 +128,10 @@ pub async fn generate_video_command(
   }
 }
 
-async fn handle_request(
+// NB(HM-918): widened from private to `pub(crate)` so the control server's
+// `POST /v1/generate/video` endpoint can dispatch through the same path as the Tauri command.
+// The other four generation commands already expose their `handle_request`.
+pub(crate) async fn handle_request(
   request: TauriGenerateVideoRequest,
   app: &AppHandle,
   app_env_configs: &AppEnvConfigs,

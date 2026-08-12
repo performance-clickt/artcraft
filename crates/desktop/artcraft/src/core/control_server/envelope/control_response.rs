@@ -64,6 +64,10 @@ pub struct ControlErrorBody {
 pub enum ControlErrorCode {
   Unauthorized,
   Internal,
+  // HM-918
+  BadRequest,
+  NotLoggedIn,
+  UpstreamApiError,
 }
 
 impl ControlErrorCode {
@@ -71,6 +75,9 @@ impl ControlErrorCode {
     match self {
       Self::Unauthorized => "UNAUTHORIZED",
       Self::Internal => "INTERNAL",
+      Self::BadRequest => "BAD_REQUEST",
+      Self::NotLoggedIn => "NOT_LOGGED_IN",
+      Self::UpstreamApiError => "UPSTREAM_API_ERROR",
     }
   }
 
@@ -78,6 +85,12 @@ impl ControlErrorCode {
     match self {
       Self::Unauthorized => StatusCode::UNAUTHORIZED,
       Self::Internal => StatusCode::INTERNAL_SERVER_ERROR,
+      Self::BadRequest => StatusCode::BAD_REQUEST,
+      // NB: 403, not 401: the bearer token was accepted, so the request IS authenticated — it is
+      // the *app* that is signed out of Artcraft. 401 stays reserved for a missing or bad token,
+      // so a client can tell "fix your token" from "sign the app in".
+      Self::NotLoggedIn => StatusCode::FORBIDDEN,
+      Self::UpstreamApiError => StatusCode::BAD_GATEWAY,
     }
   }
 }
