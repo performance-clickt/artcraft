@@ -49,8 +49,8 @@ pub async fn post_scene_handler(
 
   let request_id = Uuid::new_v4();
 
-  let receiver = match emit_scene_request(&app_handle, &bridge_state, request_id, scene_op, payload) {
-    Ok(receiver) => receiver,
+  let pending = match emit_scene_request(&app_handle, &bridge_state, request_id, scene_op, payload) {
+    Ok(pending) => pending,
     Err(err) => {
       warn!("[ControlServer] Failed to emit scene request {}: {:?}", request_id, err);
 
@@ -59,7 +59,9 @@ pub async fn post_scene_handler(
     }
   };
 
-  let result = await_bridge_reply(&bridge_state, &request_id, receiver).await;
+  // NB: `pending` is consumed here; its `Drop` is what releases the correlation-map entry, so
+  // the count logged below is read after the release.
+  let result = await_bridge_reply(pending).await;
 
   debug!(
     "[ControlServer] Scene request {} ({}) finished; {} scene request(s) still pending.",

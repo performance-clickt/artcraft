@@ -25,12 +25,17 @@ impl ControlBridgeState {
     }
   }
 
-  /// Reserves `request_id` and hands back the receiver the HTTP side waits on.
-  pub fn register(&self, request_id: Uuid) -> oneshot::Receiver<ControlBridgeReply> {
+  /// Reserves `request_id` and hands back an RAII guard holding the receiver the HTTP side
+  /// waits on. The reservation lives exactly as long as the guard.
+  pub fn register(&self, request_id: Uuid) -> PendingSceneRequest<'_> {
     let (sender, receiver) = oneshot::channel();
     self.lock_pending().insert(request_id, sender);
 
-    receiver
+    PendingSceneRequest {
+      bridge_state: self,
+      request_id,
+      receiver,
+    }
   }
 
   /// Delivers a reply. `false` means the id was unknown — a late reply for a request that
@@ -72,6 +77,36 @@ impl Default for ControlBridgeState {
   }
 }
 
+/// One live reservation in the correlation map, released when this guard drops.
+///
+/// NB: Cleanup is RAII rather than an explicit call on each exit path because of the exit path
+/// no explicit call can cover: axum drops the handler future outright when the HTTP client
+/// disconnects mid-request, so any `cancel(..)` written after the `.await` would simply never
+/// run and the reservation would leak for the life of the process.
+pub struct PendingSceneRequest<'a> {
+  bridge_state: &'a ControlBridgeState,
+  request_id: Uuid,
+  receiver: oneshot::Receiver<ControlBridgeReply>,
+}
+
+impl PendingSceneRequest<'_> {
+  pub fn request_id(&self) -> Uuid {
+    self.request_id
+  }
+
+  /// `&mut` rather than by value so awaiting the reply cannot move the receiver out of the
+  /// guard — the guard has to outlive the wait for the cleanup guarantee to hold.
+  pub fn receiver_mut(&mut self) -> &mut oneshot::Receiver<ControlBridgeReply> {
+    &mut self.receiver
+  }
+}
+
+impl Drop for PendingSceneRequest<'_> {
+  fn drop(&mut self) {
+    self.bridge_state.cancel(&self.request_id);
+  }
+}
+
 /// What the webview sent back for one scene request.
 #[derive(Clone, Debug)]
 pub struct ControlBridgeReply {
@@ -105,14 +140,30 @@ mod tests {
     let state = ControlBridgeState::new();
     let request_id = Uuid::new_v4();
 
-    let mut receiver = state.register(request_id);
+    let mut pending = state.register(request_id);
     assert_eq!(state.pending_count(), 1);
 
     assert!(state.complete(&request_id, success_reply()));
     assert_eq!(state.pending_count(), 0);
 
-    let reply = receiver.try_recv().expect("reply should have been delivered");
+    let reply = pending.receiver_mut().try_recv().expect("reply should have been delivered");
     assert!(reply.success);
+  }
+
+  #[test]
+  fn test_dropping_the_guard_releases_the_reservation() {
+    let state = ControlBridgeState::new();
+    let request_id = Uuid::new_v4();
+
+    {
+      let _pending = state.register(request_id);
+      assert_eq!(state.pending_count(), 1);
+    }
+
+    // This is the client-disconnect path: the waiting task vanishes without any explicit
+    // cleanup call, and the reservation must still be gone.
+    assert_eq!(state.pending_count(), 0);
+    assert!(!state.complete(&request_id, success_reply()));
   }
 
   #[test]
@@ -128,7 +179,7 @@ mod tests {
     let state = ControlBridgeState::new();
     let request_id = Uuid::new_v4();
 
-    let _receiver = state.register(request_id);
+    let _pending = state.register(request_id);
 
     assert!(state.complete(&request_id, success_reply()));
     assert!(!state.complete(&request_id, success_reply()));
@@ -140,7 +191,7 @@ mod tests {
     let state = ControlBridgeState::new();
     let request_id = Uuid::new_v4();
 
-    let _receiver = state.register(request_id);
+    let _pending = state.register(request_id);
     state.cancel(&request_id);
 
     assert_eq!(state.pending_count(), 0);
@@ -153,14 +204,14 @@ mod tests {
     let first_id = Uuid::new_v4();
     let second_id = Uuid::new_v4();
 
-    let mut first_receiver = state.register(first_id);
-    let mut second_receiver = state.register(second_id);
+    let mut first_pending = state.register(first_id);
+    let mut second_pending = state.register(second_id);
     assert_eq!(state.pending_count(), 2);
 
     assert!(state.complete(&second_id, success_reply()));
 
-    assert!(second_receiver.try_recv().is_ok());
-    assert!(first_receiver.try_recv().is_err());
+    assert!(second_pending.receiver_mut().try_recv().is_ok());
+    assert!(first_pending.receiver_mut().try_recv().is_err());
     assert_eq!(state.pending_count(), 1);
   }
 }
