@@ -2,6 +2,14 @@
 
 Linear is the record; this file is the resume map for the next session.
 
+## 2026-08-12 — Round 3 LANDED; M2 complete; session quiescent
+
+1. **Landed:** main @ cbb5ba03d6 (r3: HM-917/918/919/920 + gate fixes; reflect MERGE ×4; QC 20 PASS/0 FAIL; PRs #3–#6 merged). Worktrees + lane/integration branches pruned; live tree clean on main. CLAUDE.md r3 lessons added (external-contract rule; verify-first specs) — commit pending in next checkpoint commit. Canonical Lessons Log = linear.app/clickt/document/lessons-log-4a8de456b76a (12 entries); older duplicate retitled "superseded copy — do not use" (John: safe to delete; a third seed-era doc may also exist). M2 status update posted on the project (onTrack).
+2. **Board:** In Review awaiting John's Done: HM-915,916,917,918,919,920,928. Backlog: HM-921 (frontend ControlBridge — now unblocked, next lane), HM-922 (MCP scaffold — unblocked, 917 merged), HM-929/930/932–936 (hardening/follow-ups, unblocked), HM-923/924 (blocked by 922), HM-925/926/927 (M4/M5 chain). HM-931 = canceled throwaway.
+3. **Round 4 (next session or on John's go):** lanes HM-921 (frontend, Opus — first frontend lane; root.tsx/tauri-events/tauri-api allowlisted; contract comment on the issue is authoritative, brief corrected) + HM-922 (MCP TS scaffold, Opus; new top-level mcp/artcraft-mcp, no repo-surface overlap with 921) can run in parallel. Optionally + HM-930/HM-934 (Sonnet, small, disjoint). QC next round: RUST_LOG=debug; close probe-14 UI half (dismiss a card, curl id).
+4. **Open decisions for John:** merge-queue Done verdicts above; HM-929 option (a) ratification; delete duplicate Lessons Log docs.
+5. **Cold-start successor:** step 1 — read this entry + list_issues; if John has moved issues Done, start round 4 per item 3 (claim → worktrees off main @ cbb5ba03d6+ → briefs per orchestrator pattern; remember single-instance rule only matters for lanes that run the app; HM-921 verification needs the live app + curl scene ops with 3D tab open AND closed).
+
 ## 2026-08-12 — Round 3: reflect MERGE ×4; QC RUNNING (23 probes, M2 check); follow-up issues being filed
 
 1. Reflect @ a696d92d30: MERGE all four; allowlist exact; enum dedup clean; no token logging; routes above auth. 20/23 probes live-only → QC battery running now on r3 worktree (incl. ONE sanctioned cheapest-model image generation with estimate first; probe 3 signed-out case SKIPPED by coordinator; probe 14 dismissal via UI automation, may return DEFERRED; double-download probe expects 400 by design).

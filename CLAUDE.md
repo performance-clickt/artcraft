@@ -123,6 +123,7 @@ Every unit of work is a Linear issue, and each issue is written to be executed a
 
 - **Execute only what the issue specifies.** If the issue is missing context or contains an unresolved decision, stop and flag it rather than improvising — a well-formed issue shouldn't need outside context.
 - **Update issue status** as you move: claim it (In Progress) when you start — this claim happens *before* any git action and is the lock that stops two agents taking one issue — and done only when acceptance criteria are proven, reflect has run, and the PR is merged.
+- **Verify-first specs.** Issue bodies (and cross-lane relays) phrase codebase patterns as *expected — verify first*, never as fact: the `handle_request` premise was wrong in three r3 issue bodies, the pattern is mixed per file, and one lane's finding wrongly generalized to siblings. Audit the actual file before wiring to it.
 - **Never work off-Linear.** If new work surfaces mid-project, create an issue for it rather than silently expanding scope.
 - **Assume parallel agents.** Other agents may be executing other issues at the same time. Coordinate only through Linear: an In-Progress issue is owned — never start it. Pick only unclaimed, unblocked issues.
 
@@ -181,6 +182,7 @@ At each milestone boundary (M1→M5 above), before starting the next milestone's
 - Toolchain verification must cover **native build deps and global CLIs**, not just language runtimes: cmake is required (boring-sys2/BoringSSL via `wreq`) and the frontend script needs a global `nx` until HM-930 lands — a node/rust/tauri check can pass while the build is dead (HM-915).
 - A **cold cargo build of the app is ~2 minutes** (Vite ready in <1 s); don't size plans around a long build.
 - **Never commit a root `package-lock.json`** — the repo has no root `package.json`; it's a stray `npm install` artifact and a recurring upstream cleanup (HM-916 lane incident).
+- **External-contract rule:** any control endpoint that reuses an internal struct as an HTTP request body must reject unknown fields (`deny_unknown_fields` on a wrapper, or an asserted field list). Internal callers never typo; external ones do — and on generate endpoints a silently dropped key enqueues and bills wrong work (r3 gate).
 - **Secrets written to well-known paths need hostile-state handling stated up front** in the issue/brief: pre-existing file (open-mode flags don't apply on truncate), wrong mode, symlink at the path. Pattern: unlink + `create_new` + 0600 (3 of 4 round-2 gate fixes were this one class).
 
 ## Git workflow
