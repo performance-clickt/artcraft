@@ -4,6 +4,7 @@ use crate::core::commands::cost_estimate::estimate_video_cost_command::estimate_
 use crate::core::commands::response::failure_response_wrapper::CommandErrorResponseWrapper;
 use crate::core::commands::response::success_response_wrapper::CommandSuccessResponseWrapper;
 use crate::core::control_server::envelope::control_response::{ControlErrorCode, ControlErrorResponse, ControlSuccessResponse};
+use crate::core::control_server::require_tauri_state::require_tauri_state;
 use crate::core::state::app_env_configs::app_env_configs::AppEnvConfigs;
 use artcraft_api_defs::generate::cost_estimate::estimate_image_cost::{EstimateImageCostError, EstimateImageCostRequest};
 use artcraft_api_defs::generate::cost_estimate::estimate_splat_cost::{EstimateSplatCostError, EstimateSplatCostRequest};
@@ -13,9 +14,8 @@ use axum::extract::State;
 use axum::response::{IntoResponse, Response};
 use log::warn;
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
-const CONFIGS_UNAVAILABLE_MESSAGE: &str = "App environment configuration is unavailable.";
 const EMPTY_PAYLOAD_MESSAGE: &str = "The cost estimate command returned no payload.";
 const FALLBACK_FAILURE_MESSAGE: &str = "Failed to estimate cost.";
 
@@ -37,13 +37,9 @@ pub async fn post_estimate_cost_handler(
     }
   };
 
-  // NB: `try_state` rather than `state` — a missing managed type must answer with an error
-  // envelope, not panic the request task and drop the connection with no response at all.
-  let Some(app_env_configs) = app_handle.try_state::<AppEnvConfigs>() else {
-    warn!("[ControlServer] App environment configs are not managed by Tauri.");
-
-    return ControlErrorResponse::new(ControlErrorCode::Internal, CONFIGS_UNAVAILABLE_MESSAGE)
-      .into_response();
+  let app_env_configs = match require_tauri_state::<AppEnvConfigs>(&app_handle) {
+    Ok(state) => state,
+    Err(error) => return error.into_response(),
   };
 
   match request {

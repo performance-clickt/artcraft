@@ -5,8 +5,8 @@ use crate::core::control_server::endpoints::generate::common::enqueued_task_resp
   notify_frontend_of_enqueue_success, EnqueuedTaskResponse,
 };
 use crate::core::control_server::endpoints::generate::common::generate_error_mapping::generate_error_to_control_response;
-use crate::core::control_server::endpoints::generate::common::json_body::read_json_body;
-use crate::core::control_server::endpoints::generate::common::require_tauri_state::require_tauri_state;
+use crate::core::control_server::endpoints::generate::common::known_fields::read_json_body_with_known_fields;
+use crate::core::control_server::require_tauri_state::require_tauri_state;
 use crate::core::control_server::envelope::control_response::{
   ControlErrorCode, ControlErrorResponse, ControlSuccessResponse,
 };
@@ -20,14 +20,25 @@ use axum::extract::rejection::JsonRejection;
 use axum::extract::State;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
+use serde_json::Value;
 use tauri::AppHandle;
 
 const ENDPOINT: &str = "POST /v1/generate/object";
 
+/// Every field the command's request struct understands, so a misspelled one is a `BAD_REQUEST`
+/// instead of a silently dropped parameter (and a billed generation with the wrong inputs).
+const KNOWN_FIELDS: &[&str] = &[
+  "image_media_token",
+  "model",
+  "frontend_caller",
+  "frontend_subscriber_id",
+  "frontend_subscriber_payload",
+];
+
 /// `POST /v1/generate/object` — image to 3D mesh.
 pub async fn post_generate_object_handler(
   State(app_handle): State<AppHandle>,
-  body: Result<Json<EnqueueImageTo3dObjectRequest>, JsonRejection>,
+  body: Result<Json<Value>, JsonRejection>,
 ) -> Response {
   match handle_generate_object(&app_handle, body).await {
     Ok(response) => response.into_response(),
@@ -37,9 +48,9 @@ pub async fn post_generate_object_handler(
 
 async fn handle_generate_object(
   app_handle: &AppHandle,
-  body: Result<Json<EnqueueImageTo3dObjectRequest>, JsonRejection>,
+  body: Result<Json<Value>, JsonRejection>,
 ) -> Result<ControlSuccessResponse<EnqueuedTaskResponse>, ControlErrorResponse> {
-  let request = validate(read_json_body(body)?)?;
+  let request = validate(read_json_body_with_known_fields::<EnqueueImageTo3dObjectRequest>(body, KNOWN_FIELDS)?)?;
 
   let app_env_configs = require_tauri_state::<AppEnvConfigs>(app_handle)?;
   let app_data_root = require_tauri_state::<AppDataRoot>(app_handle)?;
@@ -119,6 +130,35 @@ mod tests {
     }"#).expect("body should deserialize");
 
     assert!(validate(request).is_ok());
+  }
+
+  mod body_field_tests {
+    use super::*;
+
+    const GOOD_BODY: &str = r#"{"model": "hunyuan_3d_2_1", "image_media_token": "mf_test"}"#;
+    const TYPO_BODY: &str = r#"{"model": "hunyuan_3d_2_1", "image_media_tokn": "mf_test"}"#;
+
+    #[test]
+    fn test_a_realistic_body_is_accepted() {
+      assert!(read_body(GOOD_BODY).is_ok());
+    }
+
+    #[test]
+    fn test_a_misspelled_field_is_rejected_instead_of_dropped() {
+      match read_body(TYPO_BODY) {
+        Ok(_) => panic!("expected a rejection"),
+        Err(error) => {
+          assert_eq!(error.error.code, ControlErrorCode::BadRequest);
+          assert_eq!(error.error.message, "Unknown field(s): `image_media_tokn`.");
+        }
+      }
+    }
+
+    fn read_body(body: &str) -> Result<EnqueueImageTo3dObjectRequest, ControlErrorResponse> {
+      let body: Value = serde_json::from_str(body).expect("the test body is valid JSON");
+
+      read_json_body_with_known_fields::<EnqueueImageTo3dObjectRequest>(Ok(Json(body)), KNOWN_FIELDS)
+    }
   }
 
   fn assert_bad_request(

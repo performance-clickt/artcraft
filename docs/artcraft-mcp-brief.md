@@ -21,7 +21,7 @@
 6. Task + media endpoints: `/v1/tasks`, `/v1/tasks/{id}`, `/v1/media/download`, `/v1/media` (list via artcraft_client)
 
 **M3 — Scene bridge** (integration check: scene ops via curl with 3D tab open; SCENE_NOT_ACTIVE + timeout paths verified)
-7. Rust bridge: `TauriEventName::ControlSceneRequest`, event struct, `ControlBridgeState` oneshot map, `control_bridge_reply_command`, `/v1/scene/{op}`
+7. Rust bridge: `TauriEventName::ControlSceneRequestEvent` (wire string `control_scene_request_event`), event struct, `ControlBridgeState` oneshot map, `control_bridge_reply_command`, `/v1/scene/{op}`
 8. Frontend bridge: event hook (tauri-events), reply wrapper (tauri-api), `ControlBridge.tsx`, `root.tsx` mount, index exports
 
 **M4 — MCP server** (integration check: all 16 tools green in MCP inspector)

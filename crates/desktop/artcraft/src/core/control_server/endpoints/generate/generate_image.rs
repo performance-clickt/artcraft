@@ -11,7 +11,7 @@ use crate::core::control_server::endpoints::generate::common::enqueued_task_resp
 };
 use crate::core::control_server::endpoints::generate::common::generate_error_mapping::generate_error_to_control_response;
 use crate::core::control_server::endpoints::generate::common::json_body::read_json_body;
-use crate::core::control_server::endpoints::generate::common::require_tauri_state::require_tauri_state;
+use crate::core::control_server::require_tauri_state::require_tauri_state;
 use crate::core::control_server::envelope::control_response::{
   ControlErrorCode, ControlErrorResponse, ControlSuccessResponse,
 };

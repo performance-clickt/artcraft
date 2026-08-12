@@ -1,12 +1,15 @@
 use crate::core::control_server::endpoints::pagination::{encode_page_cursor, parse_page_cursor, parse_page_limit, parse_raw_query, take_page};
 use crate::core::control_server::envelope::control_response::{ControlErrorCode, ControlErrorResponse, ControlSuccessResponse};
+use crate::core::control_server::require_signed_in_credentials::{require_signed_in_credentials, NOT_LOGGED_IN_MESSAGE};
+use crate::core::control_server::require_tauri_state::require_tauri_state;
 use crate::core::state::app_env_configs::app_env_configs::AppEnvConfigs;
-use crate::services::storyteller::state::storyteller_credential_manager::StorytellerCredentialManager;
 use artcraft_api_defs::common::responses::media_links::MediaLinks;
 use artcraft_client::credentials::storyteller_credential_set::StorytellerCredentialSet;
 use artcraft_client::endpoints::media_files::list_media_files_for_user::{list_media_files_for_user, ListMediaFilesForUserArgs, MediaFileForUserListItem};
 use artcraft_client::endpoints::media_files::search_session_media_files::{search_session_media_files, SearchSessionMediaFileListItem};
 use artcraft_client::endpoints::users::get_session_info::get_session_info;
+use artcraft_client::error::api_error::ApiError;
+use artcraft_client::error::storyteller_error::StorytellerError;
 use axum::extract::{RawQuery, State};
 use axum::response::{IntoResponse, Response};
 use chrono::{DateTime, Utc};
@@ -15,11 +18,11 @@ use enums::by_table::media_files::media_file_engine_category::MediaFileEngineCat
 use enums::by_table::media_files::media_file_type::MediaFileType;
 use log::warn;
 use serde_derive::Serialize;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 use tokens::tokens::media_files::MediaFileToken;
 
-const APP_STATE_UNAVAILABLE_MESSAGE: &str = "App configuration state is unavailable.";
-const NOT_LOGGED_IN_MESSAGE: &str = "No ArtCraft account is signed in. Sign in inside the app first.";
+const CURSOR_UNSUPPORTED_WITH_SEARCH_MESSAGE: &str =
+  "The `cursor` parameter is not supported together with `search`; the search returns a single page.";
 const SESSION_LOOKUP_FAILED_MESSAGE: &str = "Failed to read the signed-in account from the ArtCraft API.";
 const LIST_FAILED_MESSAGE: &str = "Failed to list media files from the ArtCraft API.";
 
@@ -34,7 +37,8 @@ pub struct ListMediaResponse {
   /// Pass back as `?cursor=` to fetch the next page. `null` when this is the last page.
   ///
   /// NB: Always `null` when `search` is set — the upstream search returns a single capped page
-  /// and offers no pagination, so there is nothing further to walk to.
+  /// and offers no pagination, so there is nothing further to walk to. Passing a cursor together
+  /// with `search` is rejected with `BAD_REQUEST` rather than silently slicing that one page.
   pub next_cursor: Option<String>,
 }
 
@@ -78,16 +82,14 @@ pub async fn list_media_handler(
     }
   };
 
-  let Some(app_env_configs) = app_handle.try_state::<AppEnvConfigs>() else {
-    warn!("[ControlServer] App env configs are not managed by Tauri.");
-
-    return ControlErrorResponse::new(ControlErrorCode::Internal, APP_STATE_UNAVAILABLE_MESSAGE)
-      .into_response();
+  let app_env_configs = match require_tauri_state::<AppEnvConfigs>(&app_handle) {
+    Ok(state) => state,
+    Err(error) => return error.into_response(),
   };
 
-  let credentials = match read_signed_in_credentials(&app_handle) {
+  let credentials = match require_signed_in_credentials(&app_handle) {
     Ok(credentials) => credentials,
-    Err(response) => return response,
+    Err(error) => return error.into_response(),
   };
 
   let api_host = &app_env_configs.storyteller_host;
@@ -98,14 +100,19 @@ pub async fn list_media_handler(
 
   // The search path is session-scoped upstream, so it needs no username; the plain listing does.
   if let Some(search_term) = maybe_search_term {
+    // NB: The search returns one capped page and no cursor, so honouring a cursor here would
+    // silently slice a set the cursor was never issued for. A cursor from the listing path is a
+    // client error on this path, not an empty result.
+    if page_index != 0 {
+      return ControlErrorResponse::new(
+        ControlErrorCode::BadRequest,
+        CURSOR_UNSUPPORTED_WITH_SEARCH_MESSAGE,
+      ).into_response();
+    }
+
     let response = match search_session_media_files(api_host, Some(&credentials), search_term).await {
       Ok(response) => response,
-      Err(err) => {
-        warn!("[ControlServer] Media search failed: {:?}", err);
-
-        return ControlErrorResponse::new(ControlErrorCode::UpstreamApiError, LIST_FAILED_MESSAGE)
-          .into_response();
-      }
+      Err(err) => return search_error_to_response(err),
     };
 
     let summaries: Vec<MediaSummary> = response.results.into_iter()
@@ -114,7 +121,7 @@ pub async fn list_media_handler(
 
     // NB: `next_cursor` is dropped deliberately — upstream cannot serve a second page, and
     // handing back a cursor that returns nothing would make a paging client loop.
-    let (media, _unusable_next_cursor) = take_page(summaries, page_index, page_limit);
+    let (media, _unusable_next_cursor) = take_page(summaries, 0, page_limit);
 
     return ControlSuccessResponse::new(ListMediaResponse {
       media,
@@ -164,35 +171,19 @@ pub async fn list_media_handler(
   }).into_response()
 }
 
-/// Reads the app's stored credentials, requiring a real signed-in session.
-///
-/// NB: Only the session cookie means "signed in" — the `avt` visitor cookie is present for
-/// anonymous users too. This is the single auth path for this endpoint; the webview cookie jar is
-/// never parsed. The `Err` arm is the ready-to-return error envelope.
-fn read_signed_in_credentials(app_handle: &AppHandle) -> Result<StorytellerCredentialSet, Response> {
-  let Some(credential_manager) = app_handle.try_state::<StorytellerCredentialManager>() else {
-    warn!("[ControlServer] Storyteller credential manager is not managed by Tauri.");
+/// A stale-but-present session cookie reaches the API and comes back 401/403. That is the same
+/// condition the listing path reports as `NOT_LOGGED_IN`, so the search path must not report it as
+/// a backend outage the caller should retry.
+fn search_error_to_response(error: StorytellerError) -> Response {
+  warn!("[ControlServer] Media search failed: {:?}", error);
 
-    return Err(
-      ControlErrorResponse::new(ControlErrorCode::Internal, APP_STATE_UNAVAILABLE_MESSAGE)
-        .into_response()
-    );
-  };
-
-  let maybe_credentials = match credential_manager.get_credentials() {
-    Ok(maybe_credentials) => maybe_credentials,
-    Err(err) => {
-      warn!("[ControlServer] Failed to read Storyteller credentials: {:?}", err);
-      None
-    }
-  };
-
-  match maybe_credentials {
-    Some(credentials) if credentials.session.is_some() => Ok(credentials),
-    _ => Err(
+  match error {
+    StorytellerError::Api(ApiError::Unauthorized(_) | ApiError::Forbidden(_)) => {
       ControlErrorResponse::new(ControlErrorCode::NotLoggedIn, NOT_LOGGED_IN_MESSAGE)
         .into_response()
-    ),
+    }
+    _ => ControlErrorResponse::new(ControlErrorCode::UpstreamApiError, LIST_FAILED_MESSAGE)
+        .into_response(),
   }
 }
 

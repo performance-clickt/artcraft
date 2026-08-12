@@ -1,6 +1,7 @@
 use crate::core::commands::task_queue::get_task_queue_command::{handle_request as list_task_queue_items, CompletedItemData, FailedItemData, TaskQueueItem};
 use crate::core::control_server::endpoints::pagination::{parse_page_cursor, parse_page_limit, parse_raw_query, take_page};
 use crate::core::control_server::envelope::control_response::{ControlErrorCode, ControlErrorResponse, ControlSuccessResponse};
+use crate::core::control_server::require_tauri_state::require_tauri_state;
 use crate::core::state::task_database::TaskDatabase;
 use axum::extract::{Path, RawQuery, State};
 use axum::response::{IntoResponse, Response};
@@ -13,11 +14,12 @@ use enums::tauri::tasks::task_status::TaskStatus;
 use enums::tauri::tasks::task_type::TaskType;
 use log::warn;
 use serde_derive::Serialize;
-use tauri::{AppHandle, Manager};
+use sqlite_tasks::queries::get_task_by_id::get_task_by_id;
+use sqlite_tasks::queries::list_tasks_for_frontend::TaskItem;
+use tauri::AppHandle;
 use tokens::tokens::media_files::MediaFileToken;
 use tokens::tokens::sqlite::tasks::TaskId;
 
-const TASK_DATABASE_UNAVAILABLE_MESSAGE: &str = "Task database state is unavailable.";
 const TASK_DATABASE_READ_FAILED_MESSAGE: &str = "Failed to read the local task database.";
 const TASK_NOT_FOUND_MESSAGE: &str = "No task exists with that id.";
 const UNKNOWN_STATUS_MESSAGE: &str = "The `status` parameter is not a known task status.";
@@ -129,24 +131,39 @@ pub async fn list_tasks_handler(
 }
 
 /// `GET /v1/tasks/{id}`
+///
+/// NB: This reads the row by id rather than scanning the visible task list. The list query hides
+/// tasks the user dismissed in the app, which would turn a running job into a permanent 404 the
+/// moment its card is cleared — indistinguishable, to a polling caller, from an id that never
+/// existed. It is also the difference between one indexed row read and a full-table read plus a
+/// sort on every poll.
 pub async fn get_task_handler(
   State(app_handle): State<AppHandle>,
   Path(task_id): Path<String>,
 ) -> Response {
-  let summaries = match read_task_summaries(&app_handle).await {
-    Ok(summaries) => summaries,
-    Err(response) => return response,
+  let task_database = match require_tauri_state::<TaskDatabase>(&app_handle) {
+    Ok(state) => state,
+    Err(error) => return error.into_response(),
   };
 
-  let maybe_task = summaries.into_iter()
-      .find(|summary| summary.id.as_str() == task_id);
+  let maybe_item = match get_task_by_id(task_database.get_connection(), &task_id).await {
+    Ok(maybe_item) => maybe_item,
+    Err(err) => {
+      warn!("[ControlServer] Failed to read task {}: {:?}", task_id, err);
 
-  let Some(task) = maybe_task else {
+      return ControlErrorResponse::new(ControlErrorCode::Internal, TASK_DATABASE_READ_FAILED_MESSAGE)
+        .into_response();
+    }
+  };
+
+  let Some(item) = maybe_item else {
     return ControlErrorResponse::new(ControlErrorCode::TaskNotFound, TASK_NOT_FOUND_MESSAGE)
       .into_response();
   };
 
-  ControlSuccessResponse::new(GetTaskResponse { task }).into_response()
+  ControlSuccessResponse::new(GetTaskResponse {
+    task: to_task_summary_from_item(item),
+  }).into_response()
 }
 
 /// Reads every visible task, newest first.
@@ -158,14 +175,8 @@ pub async fn get_task_handler(
 ///
 /// The `Err` arm is the ready-to-return error envelope, so callers just forward it.
 async fn read_task_summaries(app_handle: &AppHandle) -> Result<Vec<TaskSummary>, Response> {
-  let Some(task_database) = app_handle.try_state::<TaskDatabase>() else {
-    warn!("[ControlServer] Task database is not managed by Tauri.");
-
-    return Err(
-      ControlErrorResponse::new(ControlErrorCode::Internal, TASK_DATABASE_UNAVAILABLE_MESSAGE)
-        .into_response()
-    );
-  };
+  let task_database = require_tauri_state::<TaskDatabase>(app_handle)
+      .map_err(IntoResponse::into_response)?;
 
   let items = match list_task_queue_items(&task_database).await {
     Ok(items) => items,
@@ -208,6 +219,51 @@ fn to_task_summary(item: TaskQueueItem) -> TaskSummary {
     provider_job_id: item.provider_job_id,
     result: item.completed_item.map(to_task_result_summary),
     failure: item.failure_reason.map(to_task_failure_summary),
+    created_at: item.created_at,
+    completed_at: item.completed_at,
+  }
+}
+
+/// The by-id path reads the database row directly, so the completed/failed shaping the task-queue
+/// command does for the list path is repeated here.
+///
+/// NB: `completed_item` is only populated for a successful task that carries both a media token
+/// and a CDN URL — the same rule the command applies — so a half-written completion row never
+/// surfaces as a fetchable result on either path.
+fn to_task_summary_from_item(item: TaskItem) -> TaskSummary {
+  let is_complete_success = item.status == TaskStatus::CompleteSuccess;
+
+  let mut result = None;
+  let mut failure = None;
+
+  if is_complete_success {
+    let token_and_url = item.on_complete_primary_media_file_token
+        .zip(item.on_complete_primary_media_file_cdn_url);
+
+    if let Some((media_token, cdn_url)) = token_and_url {
+      result = Some(TaskResultSummary {
+        media_token,
+        cdn_url,
+        media_class: item.on_complete_primary_media_file_class,
+        thumbnail_url_template: item.on_complete_primary_media_file_thumbnail_url_template,
+      });
+    }
+  } else if item.on_failure_type.is_some() || item.on_failure_message.is_some() {
+    failure = Some(TaskFailureSummary {
+      failure_type: item.on_failure_type.unwrap_or(TaskFailureType::Unknown),
+      message: item.on_failure_message,
+    });
+  }
+
+  TaskSummary {
+    id: item.id,
+    task_status: item.status,
+    task_type: item.task_type,
+    model_type: item.model_type,
+    provider: item.provider,
+    provider_job_id: item.provider_job_id,
+    result,
+    failure,
     created_at: item.created_at,
     completed_at: item.completed_at,
   }
@@ -326,6 +382,84 @@ mod tests {
       assert_eq!(failure.failure_type, TaskFailureType::Unknown);
       assert_eq!(failure.message.as_deref(), Some("boom"));
       assert!(summary.result.is_none());
+    }
+  }
+
+  mod by_id_mapping_tests {
+    use super::*;
+
+    #[test]
+    fn test_a_completed_row_becomes_a_fetchable_result() {
+      let mut item = task_item("task_done");
+      item.status = TaskStatus::CompleteSuccess;
+      item.on_complete_primary_media_file_token = Some(MediaFileToken::new_from_str(MEDIA_TOKEN));
+      item.on_complete_primary_media_file_cdn_url = Some(CDN_URL.to_string());
+
+      let summary = to_task_summary_from_item(item);
+      let result = summary.result.expect("a completed row yields a result");
+
+      assert_eq!(result.media_token.as_str(), MEDIA_TOKEN);
+      assert_eq!(result.cdn_url, CDN_URL);
+      assert!(summary.failure.is_none());
+    }
+
+    #[test]
+    fn test_a_completed_row_without_a_cdn_url_yields_no_result() {
+      let mut item = task_item("task_half_written");
+      item.status = TaskStatus::CompleteSuccess;
+      item.on_complete_primary_media_file_token = Some(MediaFileToken::new_from_str(MEDIA_TOKEN));
+
+      let summary = to_task_summary_from_item(item);
+
+      assert!(summary.result.is_none());
+      assert!(summary.failure.is_none());
+    }
+
+    #[test]
+    fn test_a_failure_row_carries_its_reason() {
+      let mut item = task_item("task_failed");
+      item.status = TaskStatus::CompleteFailure;
+      item.on_failure_type = Some(TaskFailureType::Unknown);
+      item.on_failure_message = Some("boom".to_string());
+
+      let summary = to_task_summary_from_item(item);
+      let failure = summary.failure.expect("a failed row yields a failure");
+
+      assert_eq!(failure.failure_type, TaskFailureType::Unknown);
+      assert_eq!(failure.message.as_deref(), Some("boom"));
+      assert!(summary.result.is_none());
+    }
+
+    #[test]
+    fn test_a_pending_row_has_neither_result_nor_failure() {
+      let summary = to_task_summary_from_item(task_item("task_pending"));
+
+      assert!(summary.result.is_none());
+      assert!(summary.failure.is_none());
+    }
+
+    fn task_item(id: &str) -> TaskItem {
+      TaskItem {
+        id: TaskId::new_from_str(id),
+        status: TaskStatus::Pending,
+        task_type: TaskType::ImageGeneration,
+        model_type: None,
+        provider: None,
+        provider_job_id: None,
+        frontend_caller: None,
+        frontend_subscriber_id: None,
+        frontend_subscriber_payload: None,
+        on_complete_primary_media_file_token: None,
+        on_complete_primary_media_file_class: None,
+        on_complete_batch_token: None,
+        on_complete_primary_media_file_cdn_url: None,
+        on_complete_primary_media_file_thumbnail_url_template: None,
+        on_failure_type: None,
+        on_failure_message: None,
+        created_at: timestamp(100),
+        updated_at: timestamp(100),
+        completed_at: None,
+      }
     }
   }
 

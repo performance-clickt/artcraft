@@ -1,4 +1,4 @@
-use std::fs;
+use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
@@ -14,6 +14,14 @@ use crate::error::client_error::ClientError;
 use crate::error::storyteller_error::StorytellerError;
 use crate::utils::api_host::ApiHost;
 
+const FALLBACK_FILE_EXTENSION: &str = "bin";
+const MAX_FILE_EXTENSION_LENGTH: usize = 8;
+
+/// Extensions the OS (or a shell) may treat as runnable.
+const EXECUTABLE_FILE_EXTENSIONS: &[&str] = &[
+  "apk", "app", "bat", "cmd", "com", "dll", "exe", "jar", "js", "msi", "ps1", "scr", "sh", "so",
+];
+
 pub struct DownloadMediaFileArgs<'a, P: AsRef<Path>> {
   pub media_token: &'a MediaFileToken,
   pub api_host: &'a ApiHost,
@@ -21,9 +29,12 @@ pub struct DownloadMediaFileArgs<'a, P: AsRef<Path>> {
 }
 
 pub enum DownloadPath<P: AsRef<Path>> {
-  /// Write the file to this exact path.
+  /// Write the file to this exact path, replacing an existing file. The caller chose the name,
+  /// so the caller owns vetting it.
   ExactFilename(P),
   /// Write the file into this directory, generating a filename from the CDN URL extension.
+  /// NB: An existing file is never replaced on this path — the name is derived from a remote URL,
+  /// so silently truncating whatever already sits there is not the caller's decision.
   Directory(P),
 }
 
@@ -56,11 +67,11 @@ pub async fn download_media_file<P: AsRef<Path>>(
     media_token.as_str(), media_class.to_str(), cdn_url);
 
   // 2. Determine the output file path.
-  let output_path = match &download_path {
-    DownloadPath::ExactFilename(path) => path.as_ref().to_path_buf(),
+  let (output_path, refuse_existing_file) = match &download_path {
+    DownloadPath::ExactFilename(path) => (path.as_ref().to_path_buf(), false),
     DownloadPath::Directory(dir) => {
       let filename = derive_filename_from_url(cdn_url, &media_token);
-      dir.as_ref().join(filename)
+      (dir.as_ref().join(filename), true)
     }
   };
 
@@ -68,7 +79,12 @@ pub async fn download_media_file<P: AsRef<Path>>(
   let bytes = download_bytes(cdn_url).await?;
 
   // 4. Write to disk.
-  let mut file = fs::File::create(&output_path)
+  let mut file = OpenOptions::new()
+    .write(true)
+    .create(true)
+    .create_new(refuse_existing_file)
+    .truncate(!refuse_existing_file)
+    .open(&output_path)
     .map_err(|err| StorytellerError::Client(ClientError::IoError(err)))?;
 
   file.write_all(&bytes)
@@ -120,14 +136,32 @@ async fn download_bytes(url: &Url) -> Result<Vec<u8>, StorytellerError> {
 }
 
 /// Derive a filename from the CDN URL's path extension, falling back to the media token.
+///
+/// NB: The extension comes off a remote URL, so it is vetted rather than trusted: anything that is
+/// not a short alphanumeric extension — and anything that names an executable type — becomes
+/// `bin`. Writing `mf_xxx.sh` into a directory the caller then browses is not a download.
 fn derive_filename_from_url(url: &Url, media_token: &MediaFileToken) -> String {
   let path = url.path();
-  let extension = Path::new(path)
+  let maybe_extension = Path::new(path)
     .extension() // NB: without dot '.'
     .and_then(|ext| ext.to_str())
-    .unwrap_or("bin");
+    .filter(|ext| is_safe_file_extension(ext));
 
-  format!("{}.{}", media_token.as_str(), extension)
+  format!("{}.{}", media_token.as_str(), maybe_extension.unwrap_or(FALLBACK_FILE_EXTENSION))
+}
+
+fn is_safe_file_extension(extension: &str) -> bool {
+  if extension.is_empty() || extension.len() > MAX_FILE_EXTENSION_LENGTH {
+    return false;
+  }
+
+  if !extension.chars().all(|character| character.is_ascii_alphanumeric()) {
+    return false;
+  }
+
+  let lowercased = extension.to_ascii_lowercase();
+
+  !EXECUTABLE_FILE_EXTENSIONS.contains(&lowercased.as_str())
 }
 
 #[cfg(test)]
@@ -144,6 +178,20 @@ mod tests {
   #[test]
   fn derive_filename_from_url_handles_no_extension() {
     let url = Url::parse("https://cdn.example.com/files/abc123").unwrap();
+    let token = MediaFileToken::new_from_str("mf_test123");
+    assert_eq!(derive_filename_from_url(&url, &token), "mf_test123.bin");
+  }
+
+  #[test]
+  fn derive_filename_from_url_rejects_executable_extensions() {
+    let url = Url::parse("https://cdn.example.com/files/abc123.sh").unwrap();
+    let token = MediaFileToken::new_from_str("mf_test123");
+    assert_eq!(derive_filename_from_url(&url, &token), "mf_test123.bin");
+  }
+
+  #[test]
+  fn derive_filename_from_url_rejects_a_non_alphanumeric_extension() {
+    let url = Url::parse("https://cdn.example.com/files/abc123.p%20ng").unwrap();
     let token = MediaFileToken::new_from_str("mf_test123");
     assert_eq!(derive_filename_from_url(&url, &token), "mf_test123.bin");
   }
