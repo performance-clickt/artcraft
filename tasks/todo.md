@@ -2,7 +2,13 @@
 
 Linear is the record; this file is the resume map for the next session.
 
-## 2026-08-12 — Round 3: all 4 lanes In Review; r3 GATE RUNNING
+## 2026-08-12 — Round 3: gate done (8/10 fixed @ a696d92d30, pushed); REFLECT RUNNING
+
+1. Gate fixed: unknown-field rejection on 4 generate bodies; /v1/tasks/{id} by-id query (new sqlite_tasks get_task_by_id.rs, runtime-checked, no .sqlx entry); search 401→NOT_LOGGED_IN; search cursor→400; download honors AppPreferences dir; download filename vetting + create_new; scene event no longer dumps payload to logs; shared require_tauri_state/require_signed_in_credentials. Skipped→follow-ups: stable created_at+id cursor keying (wire-format change); minor duplication accepted. 143 lib tests. Two disclosed beyond-allowlist gate edits: download_media_file.rs recipe, sqlite_tasks mod.rs+new query.
+2. REFLECT RUNNING on r3 worktree @ a696d92d30 (4 issues vs acceptance + integrity checks).
+3. Next: reflect → QC live battery (full endpoint matrix + gate probes [search+cursor 400, typo'd generate key 400, dismissed-task-by-id 200, double-download 400] + scene SCENE_BRIDGE_TIMEOUT/unknown-op + ONE cheap real image generation with estimate_cost first = M2 milestone check) → land → prune → file queued issues → lessons → checkpoint.
+
+## 2026-08-12 — Round 3: all 4 lanes In Review; r3 GATE RUNNING (superseded)
 
 1. **Phase:** HM-917 (@35dd55c3d1, PR #3), HM-918 (@2b9672a195, PR #5), HM-919 (@9dee11c6f8, PR #6), HM-920 (@c575721e0d, PR #4) all PASS → In Review. Integration branch artcraft-mcp-r3 @ 1abeccb73c (pushed): 4 merges + coordinator commits (conflict resolution keep-all-anchored-lines; ControlErrorCode deduped to 8 variants; brief's stale scene wire string fixed → control_scene_request_event, contract comment posted on HM-921). Pre-checks: cargo check clean, 124 lib tests pass.
 2. **GATE RUNNING:** run wf_7bb90e09-2b0 (applyFixes true). Resume: Workflow { scriptPath: "/Users/johngreenhow/.claude/projects/-Users-johngreenhow-Artcraft-worktrees-artcraft-mcp-r3/0eeda523-943b-41da-b930-921650575429/workflows/scripts/merge-gate-wf_7bb90e09-2b0.js", resumeFromRunId: "wf_7bb90e09-2b0" }.
