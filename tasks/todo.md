@@ -2,6 +2,14 @@
 
 Linear is the record; this file is the resume map for the next session.
 
+## 2026-08-12 — Round 3 in flight: 4 lanes (HM-917/918/919/920)
+
+1. **Phase:** round 2 LANDED on main @ 3a647feb38 (HM-916+HM-928+gate fixes; QC 6/6); lessons applied (CLAUDE.md @ cfd44d8129, Lessons Log doc lessons-log-4fb79dcb5f5b, 6 entries). Round 3 launched: 4 Opus lanes claimed In Progress with plan comments, worktrees off main @ cfd44d8129.
+2. **Lanes:** hm-917 (read endpoints), hm-918 (generation endpoints, NO real generations), hm-919 (tasks/media), hm-920 (Rust scene bridge; lib.rs + tauri_event_name.rs allowlisted). Worktrees /Users/johngreenhow/Artcraft/worktrees/hm-9xx, branches = Linear gitBranchNames. Managed contention: each lane adds ONE anchored line (`// HM-9xx`) in build_control_router ABOVE the auth .layer() (post-.layer routes escape auth); endpoints/mod.rs append-only; conflicts resolved by coordinator at integration.
+3. **Round-3 deviation (disclosed on all 4 issues):** live curl verification deferred to integration QC — single-app-instance constraint; lanes verify via cargo check + unit tests only.
+4. **Open decisions:** John's Done verdicts on HM-915/916/928 (In Review). HM-929 option (a) refuse-on-live-pid awaiting ratification (rec (a)). Possible duplicate seeded "Lessons Log" doc in Linear (save_document may have created a second doc; the canonical one is lessons-log-4fb79dcb5f5b with 6 entries) — John can delete a stray empty duplicate if one shows.
+5. **Cold-start successor:** step 1 — check HM-917..920 states. All In Review → integration branch `artcraft-mcp-r3` off main in a fresh absolute-path worktree, merge 4 lanes (expect small conflicts in build_control_router + endpoints/mod.rs: keep ALL anchored lines, order 917→918→919→920, all above .layer()), cargo check + tests, merge gate, reflect, QC incl. FULL live curl matrix (this round's deferred evidence: all new endpoints + 401s + scene timeout path; still NO real generations without estimate_cost + cheapest model), land, prune. Any lane In Progress with no live executor → inspect worktree state before re-running.
+
 ## 2026-08-12 — Round 2: reflect = MERGE both; QC RUNNING
 
 1. **Phase:** reflect returned MERGE for HM-916 and HM-928, zero FAILs; 6 acceptance points deferred to live QC (gate rewrote the files behind the executor's live evidence). QC agent now running the probe battery on worktrees/artcraft-mcp-r2 @ 2d3b1ed427: startup log, discovery-file mode/schema, loose-mode replacement, symlink redirect, 8-case auth matrix, logged_in signed-in half (signed-out half SKIPPED by coordinator decision — protecting John's real session; covered by review+unit tests).
