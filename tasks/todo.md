@@ -2,7 +2,13 @@
 
 Linear is the record; this file is the resume map for the next session.
 
-## 2026-08-12 — Round 2: gate done (8 fixed, 2 skipped→issues); REFLECT RUNNING
+## 2026-08-12 — Round 2: reflect = MERGE both; QC RUNNING
+
+1. **Phase:** reflect returned MERGE for HM-916 and HM-928, zero FAILs; 6 acceptance points deferred to live QC (gate rewrote the files behind the executor's live evidence). QC agent now running the probe battery on worktrees/artcraft-mcp-r2 @ 2d3b1ed427: startup log, discovery-file mode/schema, loose-mode replacement, symlink redirect, 8-case auth matrix, logged_in signed-in half (signed-out half SKIPPED by coordinator decision — protecting John's real session; covered by review+unit tests).
+2. **Reflect observations queued for learnings:** stale-evidence tracking after gate fixes; "pre-existing-state path" finding class (secrets to well-known paths need hostile-state handling in briefs); recurring root package-lock.json artifact (.gitignore candidate); unused uuid dep (accepted — consumed by HM-920 scene bridge shortly).
+3. **Next:** QC PASS → land artcraft-mcp-r2 on main (merge commit), push, prune worktrees hm-916/hm-928/artcraft-mcp-r2 + local lane branches (keep origin), leave HM-916/HM-928 In Review; then checkpoint + learnings loop (user-gated). QC FAIL → failing lane back to In Progress with evidence, no land.
+
+## 2026-08-12 — Round 2: gate done (8 fixed, 2 skipped→issues); REFLECT RUNNING (superseded)
 
 1. **Phase:** merge gate complete on artcraft-mcp-r2. Fix commit 2d3b1ed427 pushed (unlink+create_new 0600 token file; logged_in=session.is_some(); Windows ACL warning; try_state; case-insensitive Bearer; error enum trimmed; nx doc pinned 21.2.3; tests 6/6; cargo check clean). Skipped findings routed: HM-929 expanded (atomic write + shutdown cleanup + live-instance guard w/ decision options, rec (a) refuse); HM-930 filed (npx nx script fix, branch AFTER r2 lands); startup-window login note commented on HM-922.
 2. **REFLECT RUNNING** (Opus, read-only) on worktree /Users/johngreenhow/Artcraft/worktrees/artcraft-mcp-r2 judging HM-916/HM-928 vs acceptance post-fixes.
