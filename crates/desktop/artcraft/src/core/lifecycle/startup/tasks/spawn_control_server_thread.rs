@@ -1,5 +1,6 @@
 use crate::core::control_server::auth::bearer_auth_layer::bearer_auth_layer;
 use crate::core::control_server::endpoints::health::get_health_handler;
+use crate::core::control_server::endpoints::task_and_media_routes::build_task_and_media_router;
 use crate::core::control_server::state::control_server_settings::ControlServerSettings;
 use crate::core::control_server::state_file::write_control_state_file::write_control_state_file;
 use crate::core::state::data_dir::app_data_root::AppDataRoot;
@@ -69,6 +70,7 @@ fn build_control_router(
 ) -> Router {
   Router::new()
     .route(CONTROL_SERVER_HEALTH_PATH, get(get_health_handler))
+    .merge(build_task_and_media_router()) // HM-919
     .layer(middleware::from_fn_with_state(settings.clone(), bearer_auth_layer))
     .with_state(app_handle)
 }

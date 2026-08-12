@@ -63,6 +63,10 @@ pub struct ControlErrorBody {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ControlErrorCode {
   Unauthorized,
+  BadRequest, // HM-919
+  NotLoggedIn, // HM-919
+  TaskNotFound, // HM-919
+  UpstreamApiError, // HM-919
   Internal,
 }
 
@@ -70,6 +74,10 @@ impl ControlErrorCode {
   pub fn to_str(&self) -> &'static str {
     match self {
       Self::Unauthorized => "UNAUTHORIZED",
+      Self::BadRequest => "BAD_REQUEST",
+      Self::NotLoggedIn => "NOT_LOGGED_IN",
+      Self::TaskNotFound => "TASK_NOT_FOUND",
+      Self::UpstreamApiError => "UPSTREAM_API_ERROR",
       Self::Internal => "INTERNAL",
     }
   }
@@ -77,6 +85,15 @@ impl ControlErrorCode {
   pub fn http_status(&self) -> StatusCode {
     match self {
       Self::Unauthorized => StatusCode::UNAUTHORIZED,
+      Self::BadRequest => StatusCode::BAD_REQUEST,
+      // NB: 403, not 401. The caller's bearer token IS valid here — 401/`UNAUTHORIZED` is
+      // reserved for a bad token, and answering 401 would wrongly invite the client to retry
+      // with different credentials. What is missing is the *app's* own Artcraft session, which
+      // no HTTP credential from this caller can supply: the user must sign in to ArtCraft.
+      Self::NotLoggedIn => StatusCode::FORBIDDEN,
+      Self::TaskNotFound => StatusCode::NOT_FOUND,
+      // The control server reached the backend but the backend (or the hop to it) failed.
+      Self::UpstreamApiError => StatusCode::BAD_GATEWAY,
       Self::Internal => StatusCode::INTERNAL_SERVER_ERROR,
     }
   }
