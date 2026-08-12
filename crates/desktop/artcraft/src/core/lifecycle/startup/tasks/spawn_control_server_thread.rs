@@ -1,9 +1,10 @@
 use crate::core::control_server::auth::bearer_auth_layer::bearer_auth_layer;
 use crate::core::control_server::endpoints::health::get_health_handler;
+use crate::core::control_server::endpoints::scene::post_scene_handler;
 use crate::core::control_server::state::control_server_settings::ControlServerSettings;
 use crate::core::control_server::state_file::write_control_state_file::write_control_state_file;
 use crate::core::state::data_dir::app_data_root::AppDataRoot;
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::{middleware, Router};
 use errors::AnyhowResult;
 use log::{error, info};
@@ -12,6 +13,7 @@ use tokio::net::TcpListener;
 
 const CONTROL_SERVER_BIND_ADDRESS: &str = "127.0.0.1:0";
 const CONTROL_SERVER_HEALTH_PATH: &str = "/v1/health";
+const CONTROL_SERVER_SCENE_PATH: &str = "/v1/scene/{op}"; // HM-920
 
 pub fn spawn_control_server_thread(
   app: &AppHandle,
@@ -69,6 +71,7 @@ fn build_control_router(
 ) -> Router {
   Router::new()
     .route(CONTROL_SERVER_HEALTH_PATH, get(get_health_handler))
+    .route(CONTROL_SERVER_SCENE_PATH, post(post_scene_handler)) // HM-920
     .layer(middleware::from_fn_with_state(settings.clone(), bearer_auth_layer))
     .with_state(app_handle)
 }

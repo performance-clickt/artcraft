@@ -63,6 +63,9 @@ pub struct ControlErrorBody {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ControlErrorCode {
   Unauthorized,
+  BadRequest,
+  SceneNotActive,
+  SceneBridgeTimeout,
   Internal,
 }
 
@@ -70,6 +73,9 @@ impl ControlErrorCode {
   pub fn to_str(&self) -> &'static str {
     match self {
       Self::Unauthorized => "UNAUTHORIZED",
+      Self::BadRequest => "BAD_REQUEST",
+      Self::SceneNotActive => "SCENE_NOT_ACTIVE",
+      Self::SceneBridgeTimeout => "SCENE_BRIDGE_TIMEOUT",
       Self::Internal => "INTERNAL",
     }
   }
@@ -77,6 +83,11 @@ impl ControlErrorCode {
   pub fn http_status(&self) -> StatusCode {
     match self {
       Self::Unauthorized => StatusCode::UNAUTHORIZED,
+      Self::BadRequest => StatusCode::BAD_REQUEST,
+      // NB: The request was well-formed; the app just has no 3D scene mounted to run it against.
+      Self::SceneNotActive => StatusCode::CONFLICT,
+      // NB: We are the gateway to the webview, and the webview never answered.
+      Self::SceneBridgeTimeout => StatusCode::GATEWAY_TIMEOUT,
       Self::Internal => StatusCode::INTERNAL_SERVER_ERROR,
     }
   }
