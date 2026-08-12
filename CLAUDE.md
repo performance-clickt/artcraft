@@ -176,6 +176,13 @@ At each milestone boundary (M1→M5 above), before starting the next milestone's
 3. **Read the Lessons Log and the milestone's completion comments** for unresolved flags. Resolve mechanical items; file follow-up issues for judgment calls. Flag missing verification evidence — don't backfill it.
 4. **Post a milestone summary comment** on the project recording verification results and how each flag was handled.
 
+## Environment & build facts (verified 2026-08-12)
+
+- Toolchain verification must cover **native build deps and global CLIs**, not just language runtimes: cmake is required (boring-sys2/BoringSSL via `wreq`) and the frontend script needs a global `nx` until HM-930 lands — a node/rust/tauri check can pass while the build is dead (HM-915).
+- A **cold cargo build of the app is ~2 minutes** (Vite ready in <1 s); don't size plans around a long build.
+- **Never commit a root `package-lock.json`** — the repo has no root `package.json`; it's a stray `npm install` artifact and a recurring upstream cleanup (HM-916 lane incident).
+- **Secrets written to well-known paths need hostile-state handling stated up front** in the issue/brief: pre-existing file (open-mode flags don't apply on truncate), wrong mode, symlink at the path. Pattern: unlink + `create_new` + 0600 (3 of 4 round-2 gate fixes were this one class).
+
 ## Git workflow
 
 Repo: **github.com/performance-clickt/artcraft** · default branch: **`main`** · upstream remote: `storytold/artcraft` (rebase target for future releases — never push to it). Every issue is delivered on its own branch and PR. **Assume other agents are working other issues in parallel.** Per issue, in order:
@@ -183,7 +190,7 @@ Repo: **github.com/performance-clickt/artcraft** · default branch: **`main`** �
 1. **Claim before touching git.** Move the issue to In Progress and self-assign in Linear *first*.
 2. **Isolate in a worktree.** From an up-to-date `main`, create a git worktree on a new branch named with the issue's Linear `gitBranchName`. One issue = one branch = one worktree = one agent. Never work on `main`.
 3. **Commit small.** Focused commits referencing the issue key (e.g. `HM-916: …`).
-4. **Open a PR** to `main` on the fork with the issue key in the title. Rebase on latest `main` first; never force-push `main`.
+4. **Open a PR** to `main` on the fork with the issue key in the title. Rebase on latest `main` first; never force-push `main`. `gh pr create` in this clone **defaults to the upstream storytold repo** — always pass `--repo performance-clickt/artcraft --base main` and verify the returned URL's org before reporting the PR (HM-928 incident: stray public PR on upstream).
 5. **Verify.** Green per the issue's acceptance criteria, reflect passed. Prove it before asking for merge.
 6. **Stop for merge approval — never self-merge.** Post the wrap-up comment with PR link and evidence, ask John to approve. Only after approval: merge, delete branch, remove worktree, mark done.
 
