@@ -2,7 +2,14 @@
 
 Linear is the record; this file is the resume map for the next session.
 
-## 2026-08-12 — Round 2: HM-928 done (In Review, PR #1); HM-916 still running
+## 2026-08-12 — Round 2: both lanes In Review; GATE RUNNING
+
+1. **Phase:** integration staged, merge gate running. HM-916 PASS (branch @ d3a4ffa3a8, PR #2), HM-928 PASS (@ dfe480cc37, PR #1), both In Review with wrap-ups. HM-929 filed (discovery-file hardening, blockedBy HM-916, Low).
+2. **Integration:** worktree /Users/johngreenhow/Artcraft/worktrees/artcraft-mcp-r2, branch artcraft-mcp-r2 off main @ 46d66ad715; both lanes merged clean + coordinator fix (dropped stray root package-lock.json from HM-916 lane). Pushed. Pre-checks green: SQLX_OFFLINE cargo check 1m11s clean.
+3. **GATE RUNNING:** run wf_2e69c2f2-56d (applyFixes true). If session dies: resume Workflow { scriptPath: "/Users/johngreenhow/.claude/projects/-Users-johngreenhow-Artcraft-worktrees-artcraft-mcp-r2/0eeda523-943b-41da-b930-921650575429/workflows/scripts/merge-gate-wf_2e69c2f2-56d.js", resumeFromRunId: "wf_2e69c2f2-56d" }.
+4. **Next after gate:** reflect pass (orchestrator:reflect, Opus, HM-916+HM-928 vs acceptance) → QC probes → land artcraft-mcp-r2 on main → push → prune worktrees hm-916/hm-928/artcraft-mcp-r2 + delete local lane branches → checkpoint + learnings loop. PR incident lesson pending user review (gh pr create defaults to upstream; use --repo performance-clickt/artcraft --base main).
+
+## 2026-08-12 — Round 2: HM-928 done (In Review, PR #1); HM-916 still running (superseded)
 
 - HM-928 PASS: branch john/hm-928-... @ dfe480cc37, PR https://github.com/performance-clickt/artcraft/pull/1, only _docs/dev_setup.md touched. Incident: gh pr create defaulted to upstream storytold/artcraft (stray public PR storytold#1893 opened+closed); HM-916 executor warned to use --repo performance-clickt/artcraft --base main. LESSON CANDIDATE for CLAUDE.md git section.
 - HM-916 (Opus) still running in worktrees/hm-916.
