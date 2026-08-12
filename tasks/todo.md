@@ -2,7 +2,14 @@
 
 Linear is the record; this file is the resume map for the next session.
 
-## 2026-08-12 — Round 3: gate done (8/10 fixed @ a696d92d30, pushed); REFLECT RUNNING
+## 2026-08-12 — Round 3: reflect MERGE ×4; QC RUNNING (23 probes, M2 check); follow-up issues being filed
+
+1. Reflect @ a696d92d30: MERGE all four; allowlist exact; enum dedup clean; no token logging; routes above auth. 20/23 probes live-only → QC battery running now on r3 worktree (incl. ONE sanctioned cheapest-model image generation with estimate first; probe 3 signed-out case SKIPPED by coordinator; probe 14 dismissal via UI automation, may return DEFERRED; double-download probe expects 400 by design).
+2. Subagent filing 5 follow-up issues (TaskId return/kill mirror; estimate_cost creds; enveloped 405 fallback; media username cache; stable cursors).
+3. After QC: PASS → land r3 on main (John pre-approved r2 pattern — but ASK again for r3 merge: bigger surface), prune 5 worktrees + 4 lane branches, lessons loop (reflect observations 1-7 + lane candidates), M2 milestone summary comment on the project, checkpoint. FAIL → failing lane back In Progress w/ evidence, others unaffected, no land.
+4. Reflect process observations queued for lessons: spec-as-fact (handle_request premise wrong in 3 bodies); external-contract-from-internal-struct rule (deny_unknown_fields); reuse-the-matching-contract-not-matching-data (dismissed filter); brief-vs-issue contradiction = stop-and-flag (wire string, closed); single-instance deferral compounding → plan live-lane or split criteria at authoring; wrap-up honesty norm (keep); {:?} on errors in credential paths lint idea.
+
+## 2026-08-12 — Round 3: gate done (8/10 fixed @ a696d92d30, pushed); REFLECT RUNNING (superseded)
 
 1. Gate fixed: unknown-field rejection on 4 generate bodies; /v1/tasks/{id} by-id query (new sqlite_tasks get_task_by_id.rs, runtime-checked, no .sqlx entry); search 401→NOT_LOGGED_IN; search cursor→400; download honors AppPreferences dir; download filename vetting + create_new; scene event no longer dumps payload to logs; shared require_tauri_state/require_signed_in_credentials. Skipped→follow-ups: stable created_at+id cursor keying (wire-format change); minor duplication accepted. 143 lib tests. Two disclosed beyond-allowlist gate edits: download_media_file.rs recipe, sqlite_tasks mod.rs+new query.
 2. REFLECT RUNNING on r3 worktree @ a696d92d30 (4 issues vs acceptance + integrity checks).
