@@ -4,6 +4,7 @@ use crate::core::commands::response::failure_response_wrapper::CommandErrorRespo
 use crate::core::commands::response::success_response_wrapper::CommandSuccessResponseWrapper;
 use crate::core::control_server::envelope::control_response::{ControlErrorCode, ControlErrorResponse, ControlSuccessResponse};
 use crate::core::state::app_env_configs::app_env_configs::AppEnvConfigs;
+use axum::extract::rejection::QueryRejection;
 use axum::extract::{Query, State};
 use axum::response::{IntoResponse, Response};
 use log::warn;
@@ -19,9 +20,17 @@ const EMPTY_PAYLOAD_MESSAGE: &str = "The model list command returned no payload.
 /// stale-on-refresh-failure fallback in that command are shared, not duplicated here.
 pub async fn get_models_handler(
   State(app_handle): State<AppHandle>,
-  Query(query): Query<ModelsQuery>,
+  // NB: `Result<Query<..>, _>` rather than `Query<..>`. An extractor rejection is emitted by axum
+  // itself as bare text, which would be the one response on this server that is not a control
+  // envelope; taking the rejection keeps an unparseable query string inside `BAD_REQUEST`.
+  query: Result<Query<ModelsQuery>, QueryRejection>,
 ) -> Response {
-  let Some(kind) = query.kind.as_deref().and_then(ModelKind::from_query_value) else {
+  let maybe_kind = query
+    .ok()
+    .and_then(|Query(query)| query.kind)
+    .and_then(|kind| ModelKind::from_query_value(&kind));
+
+  let Some(kind) = maybe_kind else {
     return ControlErrorResponse::new(ControlErrorCode::BadRequest, UNKNOWN_KIND_MESSAGE)
       .into_response();
   };
