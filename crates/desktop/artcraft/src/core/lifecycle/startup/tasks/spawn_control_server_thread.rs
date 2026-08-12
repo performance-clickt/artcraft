@@ -60,6 +60,9 @@ async fn run_control_server(
   Ok(())
 }
 
+/// NB: `layer` (not `route_layer`) is deliberate — it authenticates unmatched paths too, so an
+/// unauthenticated caller cannot probe which routes exist. Every future endpoint must be added
+/// to the `route` chain ABOVE this `layer` call; a route mounted after it is NOT authenticated.
 fn build_control_router(
   app_handle: AppHandle,
   settings: &ControlServerSettings,
