@@ -5,7 +5,7 @@ use axum::http::header::AUTHORIZATION;
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 
-const BEARER_PREFIX: &str = "Bearer ";
+const BEARER_SCHEME: &str = "bearer";
 const UNAUTHORIZED_MESSAGE: &str = "Missing or invalid bearer token.";
 
 /// Rejects every request that does not carry `Authorization: Bearer <token>` for this launch's
@@ -31,7 +31,19 @@ pub async fn bearer_auth_layer(
 fn extract_bearer_token(request: &Request) -> Option<&str> {
   let header_value = request.headers().get(AUTHORIZATION)?;
   let header_str = header_value.to_str().ok()?;
-  header_str.strip_prefix(BEARER_PREFIX)
+  parse_bearer_header(header_str)
+}
+
+/// RFC 7235 makes the auth-scheme case-insensitive and allows padding around the credentials, so
+/// `bearer <token>` from a client or proxy must not be rejected as if the token were wrong.
+fn parse_bearer_header(header_str: &str) -> Option<&str> {
+  let (scheme, credentials) = header_str.trim().split_once(' ')?;
+
+  if !scheme.eq_ignore_ascii_case(BEARER_SCHEME) {
+    return None;
+  }
+
+  Some(credentials.trim())
 }
 
 /// Compares in constant time with respect to the token contents so a caller cannot probe the
@@ -65,5 +77,19 @@ mod tests {
     assert!(!is_matching_token("0123456789abcdee", TOKEN));
     assert!(!is_matching_token("", TOKEN));
     assert!(!is_matching_token("0123456789abcdef0", TOKEN));
+  }
+
+  #[test]
+  fn test_bearer_scheme_is_case_and_whitespace_insensitive() {
+    assert_eq!(parse_bearer_header("Bearer 0123456789abcdef"), Some(TOKEN));
+    assert_eq!(parse_bearer_header("bearer 0123456789abcdef"), Some(TOKEN));
+    assert_eq!(parse_bearer_header("BEARER  0123456789abcdef "), Some(TOKEN));
+  }
+
+  #[test]
+  fn test_other_schemes_and_bare_tokens_are_rejected() {
+    assert_eq!(parse_bearer_header("Basic 0123456789abcdef"), None);
+    assert_eq!(parse_bearer_header("0123456789abcdef"), None);
+    assert_eq!(parse_bearer_header(""), None);
   }
 }
