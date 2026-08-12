@@ -3,6 +3,7 @@ import { useSignals, useSignalEffect } from "@preact/signals-react/runtime";
 import { BrowserRouter } from "react-router-dom";
 import { MainApp } from "./pages/MainApp";
 import { GlobalFileDropHandler } from "./components/GlobalFileDropHandler/GlobalFileDropHandler";
+import { ControlBridge } from "./control/ControlBridge";
 import { createRoot } from "react-dom/client";
 import "./styles/normalize.css";
 import "./styles/tailwind.css";
@@ -105,6 +106,7 @@ createRoot(document.getElementById("root")!).render(
         <div className="topbar-spacer" data-tauri-drag-region={true} />
         <MainApp />
         <GlobalFileDropHandler />
+        <ControlBridge />
       </BrowserRouter>
     </StrictMode>
   </>,
