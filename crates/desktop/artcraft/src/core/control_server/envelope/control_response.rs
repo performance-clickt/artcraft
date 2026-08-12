@@ -70,6 +70,9 @@ pub enum ControlErrorCode {
   NotLoggedIn, // HM-919
   TaskNotFound, // HM-919
   UpstreamApiError, // HM-919
+  BadRequest,
+  SceneNotActive,
+  SceneBridgeTimeout,
   Internal,
   // HM-918
   BadRequest,
@@ -85,6 +88,8 @@ impl ControlErrorCode {
       Self::NotLoggedIn => "NOT_LOGGED_IN",
       Self::TaskNotFound => "TASK_NOT_FOUND",
       Self::UpstreamApiError => "UPSTREAM_API_ERROR",
+      Self::SceneNotActive => "SCENE_NOT_ACTIVE",
+      Self::SceneBridgeTimeout => "SCENE_BRIDGE_TIMEOUT",
       Self::Internal => "INTERNAL",
       Self::BadRequest => "BAD_REQUEST",
       Self::NotLoggedIn => "NOT_LOGGED_IN",
@@ -104,6 +109,10 @@ impl ControlErrorCode {
       Self::TaskNotFound => StatusCode::NOT_FOUND,
       // The control server reached the backend but the backend (or the hop to it) failed.
       Self::UpstreamApiError => StatusCode::BAD_GATEWAY,
+      // NB: The request was well-formed; the app just has no 3D scene mounted to run it against.
+      Self::SceneNotActive => StatusCode::CONFLICT,
+      // NB: We are the gateway to the webview, and the webview never answered.
+      Self::SceneBridgeTimeout => StatusCode::GATEWAY_TIMEOUT,
       Self::Internal => StatusCode::INTERNAL_SERVER_ERROR,
       Self::BadRequest => StatusCode::BAD_REQUEST,
       // NB: 403, not 401: the bearer token was accepted, so the request IS authenticated — it is

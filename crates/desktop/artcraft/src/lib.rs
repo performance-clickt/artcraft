@@ -6,6 +6,7 @@ use tauri::Manager;
 
 use crate::core::commands::app_preferences::get_app_preferences_command::get_app_preferences_command;
 use crate::core::commands::app_preferences::update_app_preference_command::update_app_preferences_command;
+use crate::core::commands::control::control_bridge_reply_command::control_bridge_reply_command;
 use crate::core::commands::cost_estimate::estimate_image_cost_command::estimate_image_cost_command;
 use crate::core::commands::cost_estimate::estimate_splat_cost_command::estimate_splat_cost_command;
 use crate::core::commands::cost_estimate::estimate_video_cost_command::estimate_video_cost_command;
@@ -32,6 +33,7 @@ use crate::core::commands::providers::provider_set_api_key_command::provider_set
 use crate::core::commands::task_queue::get_task_queue_command::get_task_queue_command;
 use crate::core::commands::task_queue::mark_task_as_dismissed_command::mark_task_as_dismissed_command;
 use crate::core::commands::task_queue::tasks_nuke_all_command::tasks_nuke_all_command;
+use crate::core::control_server::state::control_bridge_state::ControlBridgeState;
 use crate::core::lifecycle::startup::handle_tauri_startup::handle_tauri_startup;
 use crate::core::lifecycle::startup::setup_main_window::setup_main_window;
 use crate::core::state::app_env_configs::app_env_configs::AppEnvConfigs;
@@ -206,12 +208,14 @@ pub fn run() {
     .manage(storyteller_creds_manager_3)
     .manage(worldlabs_bearer_bridge)
     .manage(provider_credential_cache)
-    .manage(worldlabs_creds_manager);
+    .manage(worldlabs_creds_manager)
+    .manage(ControlBridgeState::new());
 
   // TODO: Break this out into another module, because RustRover/IntelliJ lags with these macros.
   //  My first attempt at naively doing this didn't work because the macros can't find their codegen'd targets.
   let builder = builder.invoke_handler(tauri::generate_handler![
     check_sora_session_command,
+    control_bridge_reply_command,
     download_directory_reveal_command,
     download_media_file_command,
     download_url_command,
